@@ -22,7 +22,7 @@ export default function Admin() {
   const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const loadStats = async () => {
-    const r = await fetch(`/api/admin?token=${encodeURIComponent(token)}`);
+    const r = await fetch(`/.netlify/functions/admin?token=${encodeURIComponent(token)}`);
     if (!r.ok) { setMsg("Token invalide"); return; }
     setUnlocked(true);
     setStats(await r.json());
@@ -30,7 +30,7 @@ export default function Admin() {
 
   const addProduct = async () => {
     setMsg("");
-    const r = await fetch("/api/import", {
+    const r = await fetch("/.netlify/functions/import", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token, product: form })

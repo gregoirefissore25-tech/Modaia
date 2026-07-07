@@ -1,5 +1,9 @@
 import type { Filters, Product } from "./types";
 
+// Chemin natif des Netlify Functions. On evite le redirect /api/* (capricieux avec le fallback SPA)
+// en tapant directement /.netlify/functions/, qui est toujours route correctement.
+export const FN = "/.netlify/functions";
+
 export function deviceId(): string {
   let id = localStorage.getItem("modaia_device");
   if (!id) {
@@ -16,13 +20,13 @@ export async function fetchProducts(f: Filters): Promise<Product[]> {
     categories: f.categories.join(","),
     budget: String(f.budget)
   });
-  const r = await fetch(`/api/products?${p}`);
+  const r = await fetch(`${FN}/products?${p}`);
   const d = await r.json();
   return d.products as Product[];
 }
 
 export async function sendSwipe(productId: number, action: "like" | "pass" | "save") {
-  await fetch("/api/swipe", {
+  await fetch(`${FN}/swipe`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ device: deviceId(), productId, action })
@@ -30,7 +34,7 @@ export async function sendSwipe(productId: number, action: "like" | "pass" | "sa
 }
 
 export async function fetchSaved(): Promise<Product[]> {
-  const r = await fetch(`/api/saved?device=${deviceId()}`);
+  const r = await fetch(`${FN}/saved?device=${deviceId()}`);
   const d = await r.json();
   return d.items as Product[];
 }
@@ -41,7 +45,7 @@ export async function saveProfile(profile: {
   filters?: Partial<Filters>;
   styleVector?: Record<string, number>;
 }) {
-  await fetch("/api/profile", {
+  await fetch(`${FN}/profile`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ device: deviceId(), ...profile })
@@ -49,4 +53,4 @@ export async function saveProfile(profile: {
 }
 
 export const goUrl = (productId: number) =>
-  `/api/go?device=${deviceId()}&pid=${productId}`;
+  `${FN}/go?device=${deviceId()}&pid=${productId}`;
