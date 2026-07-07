@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { saveProfile } from "../lib/api";
+import { IconHeart, IconX } from "../components/icons";
 
 // Onboarding sans friction : 12 swipes de looks (infere le style_vector),
 // puis budget. Trois ecrans max avant le premier feed. Pas de formulaire de style.
@@ -18,6 +19,32 @@ const LOOKS = [
   { tag: "sport", img: "https://picsum.photos/seed/look11/600/800", label: "Techwear léger" },
   { tag: "casual", img: "https://picsum.photos/seed/look12/600/800", label: "Lin d'été" }
 ];
+
+const BUDGET_MIN_CENTS = 2000;
+const BUDGET_MAX_CENTS = 30000;
+const BUDGET_STEP_CENTS = 1000;
+
+// Barre de progression en segments fins, style "stories" :
+// segments votes + courant en klein, segments a venir en seam.
+function ProgressBar({ current, total }: { current: number; total: number }) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-valuenow={current + 1}
+      aria-label={`Look ${current + 1} sur ${total}`}
+      className="mb-3 flex gap-1"
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <span
+          key={i}
+          className={`h-1 flex-1 rounded-full ${i <= current ? "bg-klein" : "bg-seam"}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Onboarding() {
   const nav = useNavigate();
@@ -42,19 +69,21 @@ export default function Onboarding() {
   if (step === 0)
     return (
       <main className="flex flex-1 flex-col justify-center p-8">
-        <p className="mb-2 font-display text-xl text-klein">Modaia</p>
-        <h1 className="font-display text-4xl leading-tight">
-          Ton style,<br /><span className="text-klein">en un swipe.</span>
-        </h1>
-        <p className="mt-4 text-smoke">
-          12 looks pour cerner ton style. Ensuite, on te propose uniquement ce qui te ressemble.
-        </p>
-        <button
-          onClick={() => setStep(1)}
-          className="mt-8 rounded-xl bg-ink py-3.5 font-semibold text-chalk"
-        >
-          C'est parti
-        </button>
+        <div className="flex flex-col animate-fade-in-up">
+          <p className="mb-2 font-display text-xl text-klein">Modaia</p>
+          <h1 className="font-display text-4xl leading-tight">
+            Ton style,<br /><span className="text-klein">en un swipe.</span>
+          </h1>
+          <p className="mt-4 text-smoke">
+            12 looks pour cerner ton style. Ensuite, on te propose uniquement ce qui te ressemble.
+          </p>
+          <button
+            onClick={() => setStep(1)}
+            className="mt-8 rounded-xl bg-ink py-3.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+          >
+            C'est parti
+          </button>
+        </div>
       </main>
     );
 
@@ -62,33 +91,54 @@ export default function Onboarding() {
     const look = LOOKS[idx];
     return (
       <main className="flex flex-1 flex-col p-4">
-        <p className="mb-2 text-center text-sm text-smoke">{idx + 1} / {LOOKS.length}</p>
-        <div className="relative flex-1 overflow-hidden rounded-2xl">
+        <ProgressBar current={idx} total={LOOKS.length} />
+        {/* Cle sur idx : remonte le bloc a chaque look pour rejouer l'entree */}
+        <div key={idx} className="relative flex-1 overflow-hidden rounded-2xl animate-fade-in-up">
           <img src={look.img} alt={look.label} className="h-full w-full object-cover" />
           <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
             {look.label}
           </p>
         </div>
         <div className="mt-4 flex justify-center gap-6">
-          <button onClick={() => vote(false)} className="h-14 w-14 rounded-full border-2 border-seam bg-white text-xl text-smoke">✕</button>
-          <button onClick={() => vote(true)} className="h-14 w-14 rounded-full border-2 border-klein bg-white text-xl text-klein">♥</button>
+          <button
+            onClick={() => vote(false)}
+            aria-label="Passer ce look"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-seam bg-white text-smoke transition-transform duration-150 active:scale-90"
+          >
+            <IconX className="h-6 w-6" />
+          </button>
+          <button
+            onClick={() => vote(true)}
+            aria-label="J'aime ce look"
+            className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-klein bg-white text-klein transition-transform duration-150 active:scale-90"
+          >
+            <IconHeart className="h-6 w-6" />
+          </button>
         </div>
       </main>
     );
   }
 
+  // Remplissage du track jusqu'a la valeur, lu par .range-klein via --range-fill
+  const fillPct = ((budget - BUDGET_MIN_CENTS) / (BUDGET_MAX_CENTS - BUDGET_MIN_CENTS)) * 100;
+
   return (
-    <main className="flex flex-1 flex-col justify-center p-8">
+    <main className="flex flex-1 flex-col justify-center p-8 animate-fade-in-up">
       <h2 className="font-display text-3xl">Ton budget par pièce ?</h2>
       <p className="mt-6 font-display text-5xl text-klein">
-        {budget >= 30000 ? "Illimité" : `${budget / 100} €`}
+        {budget >= BUDGET_MAX_CENTS ? "Illimité" : `${budget / 100} €`}
       </p>
       <input
-        type="range" min={2000} max={30000} step={1000}
+        type="range" min={BUDGET_MIN_CENTS} max={BUDGET_MAX_CENTS} step={BUDGET_STEP_CENTS}
         value={budget} onChange={(e) => setBudget(Number(e.target.value))}
-        className="mt-6 w-full accent-klein"
+        aria-label="Budget maximum par pièce"
+        className="range-klein mt-6 w-full"
+        style={{ "--range-fill": `${fillPct}%` } as CSSProperties}
       />
-      <button onClick={finish} className="mt-10 rounded-xl bg-klein py-3.5 font-semibold text-chalk">
+      <button
+        onClick={finish}
+        className="mt-10 rounded-xl bg-klein py-3.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+      >
         Voir ma sélection
       </button>
     </main>

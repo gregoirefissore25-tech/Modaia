@@ -48,3 +48,54 @@ body {
   @apply absolute -right-2 top-6 bg-ink text-chalk px-3 py-2 rotate-3 shadow-lg;
   clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
 }
+
+/* Slider maison reutilisable (Onboarding, FilterSheet).
+   Remplissage optionnel du track via la variable --range-fill (ex. "40%")
+   posee en style inline ; sans elle, piste neutre uniforme en seam. */
+.range-klein {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+.range-klein::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    theme('colors.klein') 0%,
+    theme('colors.klein') var(--range-fill, 0%),
+    theme('colors.seam') var(--range-fill, 0%),
+    theme('colors.seam') 100%
+  );
+}
+.range-klein::-moz-range-track {
+  height: 5px;
+  border-radius: 9999px;
+  background: theme('colors.seam');
+}
+.range-klein::-moz-range-progress {
+  height: 5px;
+  border-radius: 9999px;
+  background: theme('colors.klein');
+}
+.range-klein::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -9.5px; /* centre le thumb 24px sur la piste 5px */
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid theme('colors.klein');
+  box-shadow: 0 2px 8px rgb(20 19 18 / 0.18);
+}
+.range-klein::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid theme('colors.klein');
+  box-shadow: 0 2px 8px rgb(20 19 18 / 0.18);
+}
