@@ -5,23 +5,12 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   plugins: [
     react(),
+    // selfDestroying: publie un service worker qui DESINSTALLE l'ancien et vide ses caches
+    // sur tous les navigateurs qui l'avaient deja. Indispensable pour degager le SW qui
+    // servait du code perime. On reactivera une vraie PWA plus tard, app stabilisee.
     VitePWA({
-      registerType: "autoUpdate",
-      manifest: {
-        name: "Modaia",
-        short_name: "Modaia",
-        description: "Ton style, en un swipe.",
-        theme_color: "#141312",
-        background_color: "#FAF8F4",
-        display: "standalone",
-        icons: [
-          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
-        ]
-      }
+      selfDestroying: true,
+      registerType: "autoUpdate"
     })
-  ],
-  server: {
-    proxy: { "/api": "http://localhost:8888" }
-  }
+  ]
 });
