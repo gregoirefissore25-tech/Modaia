@@ -6,16 +6,18 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Fallback SPA uniquement. Les functions sont servies nativement sur /.netlify/functions/*
+# et exposees en /api/* via la config ci-dessous, AVANT ce fallback.
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Sync quotidien du flux produits affilie (Netlify Scheduled Functions)
 [functions."feed-sync"]
   schedule = "@daily"
