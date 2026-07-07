@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import type { HandlerResponse } from "@netlify/functions";
 
 export const sql = neon(process.env.DATABASE_URL as string);
 
@@ -11,8 +12,8 @@ export async function getOrCreateUser(deviceId: string): Promise<string> {
   return rows[0].id as string;
 }
 
-export const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
+export const json = (status: number, body: unknown): HandlerResponse => ({
+  statusCode: status,
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(body)
+});

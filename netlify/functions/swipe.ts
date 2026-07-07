@@ -1,9 +1,10 @@
 // POST /api/swipe  { device, productId, action: like|pass|save }
+import type { Handler } from "@netlify/functions";
 import { sql, getOrCreateUser, json } from "./_db";
 
-export default async (req: Request) => {
-  if (req.method !== "POST") return json(405, { error: "POST uniquement" });
-  const { device, productId, action } = await req.json();
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== "POST") return json(405, { error: "POST uniquement" });
+  const { device, productId, action } = JSON.parse(event.body || "{}");
   if (!device || !productId || !["like", "pass", "save"].includes(action))
     return json(400, { error: "parametres invalides" });
 

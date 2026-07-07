@@ -1,11 +1,9 @@
 // GET /api/saved?device=xxx
-// Lookbook groupe par marchand : la reponse V1 au panier multi-marques.
-// Un bouton checkout par marchand, chaque lien passe par /api/go pour le tracking.
+import type { Handler } from "@netlify/functions";
 import { sql, getOrCreateUser, json } from "./_db";
 
-export default async (req: Request) => {
-  const u = new URL(req.url);
-  const device = u.searchParams.get("device");
+export const handler: Handler = async (event) => {
+  const device = (event.queryStringParameters || {}).device;
   if (!device) return json(400, { error: "device requis" });
 
   const userId = await getOrCreateUser(device);

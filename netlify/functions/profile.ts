@@ -1,16 +1,15 @@
-// GET/POST /api/profile : profil de style (tailles, budget, filtres, style_vector onboarding)
+// GET/POST /api/profile
+import type { Handler } from "@netlify/functions";
 import { sql, getOrCreateUser, json } from "./_db";
 
-export default async (req: Request) => {
-  const u = new URL(req.url);
-  const device =
-    u.searchParams.get("device") ||
-    (req.method === "POST" ? (await req.clone().json()).device : null);
+export const handler: Handler = async (event) => {
+  const q = event.queryStringParameters || {};
+  const body = event.httpMethod === "POST" ? JSON.parse(event.body || "{}") : {};
+  const device = q.device || body.device;
   if (!device) return json(400, { error: "device requis" });
   const userId = await getOrCreateUser(device);
 
-  if (req.method === "POST") {
-    const body = await req.json();
+  if (event.httpMethod === "POST") {
     await sql`
       insert into style_profiles (user_id, sizes, budget_max_cents, filters, style_vector, updated_at)
       values (${userId}, ${JSON.stringify(body.sizes || {})}::jsonb,

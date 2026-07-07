@@ -1,7 +1,5 @@
-// F0 - Amorcage manuel via SiteStripe (avant acces PA-API).
-// POST /api/import { token, product:{ source, imageUrl?, title, brand?, priceEur, category, gender } }
-// "source" accepte : un lien affilie brut OU le snippet HTML "Image" de SiteStripe
-// (dans ce cas, href + img src sont extraits automatiquement).
+// F0 - Amorcage manuel via SiteStripe. POST /api/import { token, product:{...} }
+import type { Handler } from "@netlify/functions";
 import { sql, json } from "./_db";
 
 const ASIN_RE = /\/([A-Z0-9]{10})(?:[/?]|$)/;
@@ -11,16 +9,15 @@ function parseSource(source: string): { productUrl: string; imageUrl: string | n
   if (/<a\s/i.test(s)) {
     const href = s.match(/href=["']([^"']+)["']/i)?.[1] || "";
     let img = s.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || null;
-    // Monte la resolution des vignettes widget SiteStripe (160px -> 500px)
     if (img) img = img.replace(/_SL\d+_/i, "_SL500_").replace(/_AC_[A-Z]{2}\d+_/i, "_AC_SL500_");
     return { productUrl: href.replace(/&amp;/g, "&"), imageUrl: img };
   }
   return { productUrl: s, imageUrl: null };
 }
 
-export default async (req: Request) => {
-  if (req.method !== "POST") return json(405, { error: "POST uniquement" });
-  const body = await req.json();
+export const handler: Handler = async (event) => {
+  if (event.httpMethod !== "POST") return json(405, { error: "POST uniquement" });
+  const body = JSON.parse(event.body || "{}");
   if (!process.env.ADMIN_TOKEN || body.token !== process.env.ADMIN_TOKEN)
     return json(401, { error: "token invalide" });
 

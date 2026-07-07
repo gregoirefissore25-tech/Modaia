@@ -1,16 +1,16 @@
 // GET /api/products?device=xxx&gender=women&categories=dress,top&budget=5000
-// F2 - Feed score : affinite style_vector (tags produit), fraicheur, hors deja swipes.
+import type { Handler } from "@netlify/functions";
 import { sql, getOrCreateUser, json } from "./_db";
 
-export default async (req: Request) => {
-  const u = new URL(req.url);
-  const device = u.searchParams.get("device");
+export const handler: Handler = async (event) => {
+  const p = event.queryStringParameters || {};
+  const device = p.device;
   if (!device) return json(400, { error: "device requis" });
 
   const userId = await getOrCreateUser(device);
-  const gender = u.searchParams.get("gender") || "women";
-  const budget = Number(u.searchParams.get("budget") || 0);
-  const cats = (u.searchParams.get("categories") || "").split(",").filter(Boolean);
+  const gender = p.gender || "women";
+  const budget = Number(p.budget || 0);
+  const cats = (p.categories || "").split(",").filter(Boolean);
 
   const prof = await sql`select style_vector from style_profiles where user_id = ${userId}`;
   const vector: Record<string, number> = prof[0]?.style_vector || {};

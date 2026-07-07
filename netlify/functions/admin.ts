@@ -1,9 +1,10 @@
-// F3 - Stats admin : GET /api/admin?token=ADMIN_TOKEN
+// GET /api/admin?token=ADMIN_TOKEN
+import type { Handler } from "@netlify/functions";
 import { sql, json } from "./_db";
 
-export default async (req: Request) => {
-  const u = new URL(req.url);
-  if (!process.env.ADMIN_TOKEN || u.searchParams.get("token") !== process.env.ADMIN_TOKEN)
+export const handler: Handler = async (event) => {
+  const token = (event.queryStringParameters || {}).token;
+  if (!process.env.ADMIN_TOKEN || token !== process.env.ADMIN_TOKEN)
     return json(401, { error: "non autorise" });
 
   const [totals] = await sql`
