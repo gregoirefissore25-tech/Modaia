@@ -3,7 +3,46 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
-body { @apply bg-chalk text-ink font-body antialiased; }
+html, body { overscroll-behavior-y: contain; }
+body {
+  @apply bg-chalk text-ink font-body antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Focus clavier visible partout, en klein */
+:focus-visible {
+  outline: 2px solid theme('colors.klein');
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* Selection de texte */
+::selection {
+  background: theme('colors.klein');
+  color: theme('colors.chalk');
+}
+
+/* Mouvement reduit : neutraliser les animations non essentielles */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Etat de chargement */
+.skeleton {
+  @apply rounded-2xl animate-shimmer;
+  background: linear-gradient(
+    100deg,
+    theme('colors.seam') 36%,
+    theme('colors.chalk') 50%,
+    theme('colors.seam') 64%
+  );
+  background-size: 200% 100%;
+}
 
 .tag {
   @apply absolute -right-2 top-6 bg-ink text-chalk px-3 py-2 rotate-3 shadow-lg;
