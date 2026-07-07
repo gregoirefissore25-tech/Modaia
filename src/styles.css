@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-chalk text-ink font-body antialiased; }
+
+.tag {
+  @apply absolute -right-2 top-6 bg-ink text-chalk px-3 py-2 rotate-3 shadow-lg;
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+}

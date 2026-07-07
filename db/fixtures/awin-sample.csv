@@ -1,0 +1,4 @@
+aw_product_id,product_name,brand_name,merchant_name,category_name,search_price,currency,merchant_image_url,aw_deep_link,merchant_deep_link,in_stock
+A1001,"Robe midi fleurie, manches courtes",Vila,Zalando FR,Femme > Robes,49.99,EUR,https://img.example/a1001.jpg,https://www.awin1.com/pclick.php?p=A1001,https://zalando.fr/p/a1001,1
+A1002,Oversized Graphic Hoodie,Collusion,ASOS FR,Women > Tops > Sweats,35.00,EUR,https://img.example/a1002.jpg,https://www.awin1.com/pclick.php?p=A1002,https://asos.com/p/a1002,1
+A1003,Legging training taille haute,Nike,Zalando FR,Femme > Sport > Leggings,29.99,EUR,https://img.example/a1003.jpg,https://www.awin1.com/pclick.php?p=A1003,https://zalando.fr/p/a1003,1
