@@ -1,38 +1,85 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Product } from "../lib/types";
 import { price } from "../lib/types";
 
-type Props = {
+export type SwipeAction = "like" | "pass" | "save";
+
+export type SwipeCardProps = {
   product: Product;
   onSwipe: (action: "like" | "pass") => void;
+  /** Seule la carte du dessus de la pile est draggable. */
+  interactive?: boolean;
+  /** Quand definie, la carte s'anime hors ecran puis previent le parent via onExited. */
+  exiting?: SwipeAction | null;
+  onExited?: () => void;
+};
+
+const SWIPE_THRESHOLD_PX = 90;
+const BADGE_THRESHOLD_PX = 40;
+const EXIT_DURATION_MS = 220;
+
+const EXIT_TRANSFORMS: Record<SwipeAction, string> = {
+  like: "translateX(120%) rotate(12deg)",
+  pass: "translateX(-120%) rotate(-12deg)",
+  save: "translateY(-120%)"
 };
 
 // Carte swipe : drag pointer + boutons. L'etiquette prix rotative est la signature visuelle.
-export default function SwipeCard({ product, onSwipe }: Props) {
+export default function SwipeCard({
+  product,
+  onSwipe,
+  interactive = true,
+  exiting = null,
+  onExited
+}: SwipeCardProps) {
   const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
 
+  // La sortie est calee sur la duree de la transition (setTimeout, robuste meme si
+  // prefers-reduced-motion coupe la transition).
+  useEffect(() => {
+    if (!exiting || !onExited) return;
+    const timer = setTimeout(onExited, EXIT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [exiting, onExited]);
+
   const onDown = (e: React.PointerEvent) => {
+    if (exiting) return;
     startX.current = e.clientX;
+    setDragging(true);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
-    if (startX.current !== null) setDx(e.clientX - startX.current);
+    if (startX.current === null || exiting) return;
+    setDx(e.clientX - startX.current);
   };
   const onUp = () => {
-    if (Math.abs(dx) > 90) onSwipe(dx > 0 ? "like" : "pass");
+    if (startX.current === null) return;
     startX.current = null;
-    setDx(0);
+    setDragging(false);
+    if (Math.abs(dx) > SWIPE_THRESHOLD_PX) {
+      // Pas de reset de dx : la transition de sortie part de la position relachee.
+      onSwipe(dx > 0 ? "like" : "pass");
+      return;
+    }
+    setDx(0); // snap-back anime (la transition se reactive hors drag)
   };
+
+  const transform = exiting
+    ? EXIT_TRANSFORMS[exiting]
+    : `translateX(${dx}px) rotate(${dx / 25}deg)`;
+  const handlers = interactive
+    ? { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp }
+    : {};
 
   return (
     <div
-      className="relative h-full w-full touch-none select-none overflow-hidden rounded-2xl bg-white shadow-xl transition-transform"
-      style={{ transform: `translateX(${dx}px) rotate(${dx / 25}deg)` }}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerCancel={onUp}
+      className={`relative h-full w-full touch-none select-none overflow-hidden rounded-2xl bg-white shadow-xl ${
+        dragging ? "" : "transition-[transform,opacity] duration-200 ease-out"
+      } ${!interactive || exiting ? "pointer-events-none" : ""}`}
+      style={{ transform, opacity: exiting ? 0 : 1 }}
+      {...handlers}
     >
       <img
         src={product.image_url}
@@ -45,15 +92,15 @@ export default function SwipeCard({ product, onSwipe }: Props) {
         <p className="text-xs uppercase tracking-widest text-blush">{product.brand} · {product.merchant}</p>
         <p className="font-display text-lg leading-tight">{product.title}</p>
       </div>
-      {dx > 40 && <Badge text="J'aime" cls="left-4 bg-klein" />}
-      {dx < -40 && <Badge text="Passe" cls="right-4 bg-ink" />}
+      {(dx > BADGE_THRESHOLD_PX || exiting === "like") && <Badge text="J'aime" cls="left-4 bg-klein" />}
+      {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && <Badge text="Passe" cls="right-4 bg-ink" />}
     </div>
   );
 }
 
 function Badge({ text, cls }: { text: string; cls: string }) {
   return (
-    <span className={`absolute top-4 rounded px-3 py-1 font-display text-chalk ${cls}`}>
+    <span className={`absolute top-4 animate-scale-in rounded px-3 py-1 font-display text-chalk ${cls}`}>
       {text}
     </span>
   );
