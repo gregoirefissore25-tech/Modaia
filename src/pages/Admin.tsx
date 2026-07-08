@@ -136,7 +136,7 @@ export default function Admin() {
         </div>
         <button
           onClick={addProduct}
-          className="w-full rounded-lg bg-klein py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+          className="w-full rounded-xl bg-klein py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
         >
           Ajouter à Modaia
         </button>

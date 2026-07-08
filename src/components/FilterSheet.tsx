@@ -62,7 +62,7 @@ export default function FilterSheet({ filters, onChange, onClose }: Props) {
     >
       <div
         className={
-          "w-full rounded-t-2xl bg-chalk p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] " +
+          "w-full rounded-t-2xl bg-chalk p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl " +
           (closing
             ? "translate-y-full transition-transform duration-200 ease-out"
             : "animate-slide-up")

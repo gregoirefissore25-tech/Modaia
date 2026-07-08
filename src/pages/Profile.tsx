@@ -36,7 +36,7 @@ export default function Profile() {
           ))}
           <button
             onClick={save}
-            className="w-full rounded-lg bg-ink py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+            className="w-full rounded-xl bg-ink py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
           >
             Enregistrer
           </button>
