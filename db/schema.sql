@@ -9,6 +9,9 @@ create table if not exists merchants (
   commission_pct numeric(5,2),
   created_at timestamptz default now()
 );
+-- Unicite sur le nom : import.ts et feed-sync.ts font un find-or-create par nom
+-- (on conflict (name) do nothing), sans cet index chaque appel creait un doublon.
+create unique index if not exists idx_merchants_name on merchants (name);
 
 create table if not exists products (
   id bigserial primary key,

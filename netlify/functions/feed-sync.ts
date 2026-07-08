@@ -32,7 +32,7 @@ export async function ingest(csvText: string): Promise<number> {
     const mName = r.merchant_name || "Marchand";
     let merchantId = seenMerchants.get(mName);
     if (!merchantId) {
-      const rows = await sql`insert into merchants (name, network) values (${mName}, 'awin') on conflict do nothing returning id`;
+      const rows = await sql`insert into merchants (name, network) values (${mName}, 'awin') on conflict (name) do nothing returning id`;
       merchantId = rows[0]?.id ?? (await sql`select id from merchants where name = ${mName}`)[0].id;
       seenMerchants.set(mName, merchantId as number);
     }

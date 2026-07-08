@@ -35,7 +35,7 @@ export const handler: Handler = async (event) => {
   const mrows = await sql`
     insert into merchants (name, network, domain, commission_pct)
     values ('Amazon', 'direct', 'amazon.fr', 3.00)
-    on conflict do nothing returning id
+    on conflict (name) do nothing returning id
   `;
   const merchantId = mrows[0]?.id ?? (await sql`select id from merchants where name='Amazon'`)[0].id;
 
