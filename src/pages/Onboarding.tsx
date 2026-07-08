@@ -193,16 +193,18 @@ export default function Onboarding() {
     return (
       <main className="flex flex-1 flex-col justify-center p-8">
         <div className="flex flex-col animate-fade-in-up">
-          <p className="mb-2 font-display text-xl text-klein">Modaia</p>
-          <h1 className="font-display text-4xl leading-tight">
-            Ton style,<br /><span className="text-klein">en un swipe.</span>
+          <p className="mb-8 text-xs font-semibold uppercase tracking-[0.35em] text-smoke">Modaia</p>
+          <h1 className="font-display text-6xl leading-[0.96] tracking-tight">
+            Ton style,
+            <br />
+            <span className="text-klein">en un swipe.</span>
           </h1>
-          <p className="mt-4 text-smoke">
+          <p className="mt-7 max-w-[30ch] text-smoke">
             12 looks pour cerner ton style. Ensuite, on te propose uniquement ce qui te ressemble.
           </p>
           <button
             onClick={() => setStep(1)}
-            className="mt-8 rounded-xl bg-ink py-3.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+            className="mt-12 rounded-sm bg-ink py-4 text-sm font-semibold uppercase tracking-[0.15em] text-chalk transition-transform duration-150 active:scale-[0.97]"
           >
             C'est parti
           </button>

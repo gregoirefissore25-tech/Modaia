@@ -67,12 +67,12 @@ export default function Explore() {
   }, [stack, filters, load]);
 
   return (
-    <main className="relative flex flex-1 flex-col overflow-hidden p-4">
-      <header className="mb-3 flex items-center justify-between">
-        <h1 className="font-display text-2xl">Explorer</h1>
+    <main className="relative flex flex-1 flex-col overflow-hidden px-3 pb-4 pt-5">
+      <header className="mb-4 flex items-center justify-between">
+        <h1 className="font-display text-3xl tracking-tight">Explorer</h1>
         <button
           onClick={() => setShowFilters(true)}
-          className="flex items-center gap-1.5 rounded-full border border-seam px-4 py-1.5 text-sm"
+          className="flex items-center gap-1.5 text-sm uppercase tracking-wide text-smoke transition-colors duration-150 hover:text-ink"
         >
           <IconFilter className="h-4 w-4" />
           <span>Filtres{filters.categories.length > 0 && ` (${filters.categories.length})`}</span>
@@ -140,7 +140,7 @@ export default function Explore() {
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-center gap-6">
+      <div className="mt-5 flex items-center justify-center gap-8">
         <Action label="Passer" onClick={() => act("pass")} cls="border-seam text-smoke" icon={<IconX className="h-5 w-5" />} />
         <Action label="Garder" onClick={() => act("save")} cls="border-klein text-klein" icon={<IconHeart className="h-7 w-7" />} big />
         <Action label="J'aime" onClick={() => act("like")} cls="border-ink text-ink" icon={<IconArrowUp className="h-5 w-5" />} />
@@ -165,7 +165,7 @@ function Action({ label, onClick, cls, icon, big }: {
     <button
       onClick={onClick}
       aria-label={label}
-      className={`flex items-center justify-center rounded-full border-2 bg-white transition-transform duration-150 active:scale-90 ${cls} ${big ? "h-16 w-16" : "h-12 w-12"}`}
+      className={`flex items-center justify-center rounded-full border bg-white transition-transform duration-150 active:scale-90 ${cls} ${big ? "h-16 w-16" : "h-12 w-12"}`}
     >
       {icon}
     </button>

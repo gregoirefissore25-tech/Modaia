@@ -36,7 +36,7 @@ export default function Saved() {
 
   return (
     <main className="flex-1 overflow-y-auto p-4">
-      <h1 className="mb-1 font-display text-2xl">Lookbook</h1>
+      <h1 className="mb-1 font-display text-3xl tracking-tight">Lookbook</h1>
       <p className="mb-5 text-sm text-smoke">Tes coups de cœur, prêts à commander marque par marque.</p>
 
       {loading && (

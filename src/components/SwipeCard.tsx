@@ -79,7 +79,7 @@ export default function SwipeCard({
 
   return (
     <motion.div
-      className="relative h-full w-full touch-none select-none overflow-hidden rounded-2xl bg-white shadow-xl"
+      className="relative h-full w-full touch-none select-none overflow-hidden rounded-lg bg-white shadow-xl"
       style={{ x, y, rotate, opacity, pointerEvents: !interactive || exiting ? "none" : undefined }}
       drag={interactive && !exiting ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -100,9 +100,9 @@ export default function SwipeCard({
         draggable={false}
       />
       <div className="tag font-display text-lg">{price(product.price_cents, product.currency)}</div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 to-transparent p-4 pt-12 text-chalk">
-        <p className="text-xs uppercase tracking-widest text-blush">{product.brand} · {product.merchant}</p>
-        <p className="font-display text-lg leading-tight">{product.title}</p>
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/30 to-transparent p-5 pt-16 text-chalk">
+        <p className="text-xs uppercase tracking-[0.2em] text-blush">{product.brand} · {product.merchant}</p>
+        <p className="mt-1 font-display text-2xl leading-tight tracking-tight">{product.title}</p>
       </div>
       {(dragX > BADGE_THRESHOLD_PX || exiting === "like") && (
         <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />

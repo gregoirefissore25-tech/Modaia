@@ -26,7 +26,7 @@ export default function Profile() {
 
   return (
     <main className="flex-1 overflow-y-auto p-4">
-      <h1 className="mb-6 font-display text-2xl">Profil</h1>
+      <h1 className="mb-6 font-display text-3xl tracking-tight">Profil</h1>
       <section>
         <h2 className="font-display">Mes tailles</h2>
         <div className="mt-3 space-y-4 border-t border-seam pt-4">
