@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import type { PanInfo } from "motion/react";
 import { saveProfile } from "../lib/api";
 import { tapFeedback } from "../lib/haptics";
 import { IconHeart, IconX } from "../components/icons";
@@ -23,9 +25,11 @@ const LOOKS = [
   { tag: "casual", img: "https://picsum.photos/seed/look12/600/800", label: "Lin d'été" }
 ];
 
-const SWIPE_THRESHOLD_PX = 90;
+const SWIPE_DISTANCE_PX = 90;
+const SWIPE_VELOCITY_PX_S = 500;
 const BADGE_THRESHOLD_PX = 40;
-const EXIT_DURATION_MS = 220;
+const EXIT_DURATION_MS = 280;
+const EXIT_SPRING = { type: "spring", stiffness: 300, damping: 30 } as const;
 
 const BUDGET_MIN_CENTS = 2000;
 const BUDGET_MAX_CENTS = 30000;
@@ -47,6 +51,69 @@ function LookImage({ src, alt }: { src: string; alt: string }) {
         }`}
       />
     </>
+  );
+}
+
+type Look = (typeof LOOKS)[number];
+
+// Carte de look draggable (meme physique ressort/velocite que SwipeCard).
+function LookCard({
+  look,
+  exiting,
+  onDecide
+}: {
+  look: Look;
+  exiting: "like" | "pass" | null;
+  onDecide: (liked: boolean) => void;
+}) {
+  const [dragX, setDragX] = useState(0);
+  const x = useMotionValue(0);
+  const opacity = useMotionValue(1);
+  const rotate = useTransform(x, [-300, 300], [-16, 16]);
+
+  useEffect(() => {
+    if (!exiting) return;
+    const targetX = exiting === "like" ? 520 : -520;
+    const controls = [animate(x, targetX, EXIT_SPRING), animate(opacity, 0, { duration: 0.2 })];
+    return () => controls.forEach((c) => c.stop());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exiting]);
+
+  const handleDrag = (_: unknown, info: PanInfo) => setDragX(info.offset.x);
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.x > SWIPE_DISTANCE_PX || info.velocity.x > SWIPE_VELOCITY_PX_S) {
+      onDecide(true);
+      return;
+    }
+    if (info.offset.x < -SWIPE_DISTANCE_PX || info.velocity.x < -SWIPE_VELOCITY_PX_S) {
+      onDecide(false);
+      return;
+    }
+    setDragX(0);
+  };
+
+  return (
+    <motion.div
+      className="relative h-full w-full touch-none select-none overflow-hidden rounded-2xl"
+      style={{ x, rotate, opacity, pointerEvents: exiting ? "none" : undefined }}
+      drag={exiting ? false : "x"}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.7}
+      dragTransition={{ bounceStiffness: 420, bounceDamping: 32 }}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
+    >
+      <LookImage src={look.img} alt={look.label} />
+      <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
+        {look.label}
+      </p>
+      {(dragX > BADGE_THRESHOLD_PX || exiting === "like") && (
+        <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
+      )}
+      {(dragX < -BADGE_THRESHOLD_PX || exiting === "pass") && (
+        <Badge text="Passe" icon={<IconX className="h-4 w-4" />} cls="right-4 bg-ink" />
+      )}
+    </motion.div>
   );
 }
 
@@ -80,18 +147,14 @@ export default function Onboarding() {
   const [budget, setBudget] = useState(10000);
   const [finishing, setFinishing] = useState<boolean>(false);
 
-  // Drag au doigt, meme mecanique que SwipeCard (feed principal) : relache sous le
-  // seuil = snap-back anime, au-dela = decision + sortie animee avant de passer au look suivant.
-  const [dx, setDx] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  // Decision (drag physique ou bouton) : sortie animee (LookCard) avant de passer
+  // au look suivant, meme mecanique que SwipeCard (feed principal).
   const [exiting, setExiting] = useState<"like" | "pass" | null>(null);
-  const startX = useRef<number | null>(null);
 
   // Avance au look suivant (ou a l'ecran budget si c'etait le dernier), une fois la
   // sortie animee terminee.
   const advance = useCallback(() => {
     setExiting(null);
-    setDx(0);
     setIdx((i) => {
       if (i + 1 >= LOOKS.length) {
         setStep(2);
@@ -113,27 +176,6 @@ export default function Onboarding() {
     const tag = LOOKS[idx].tag;
     if (liked) setVector((v) => ({ ...v, [tag]: (v[tag] || 0) + 1 }));
     setExiting(liked ? "like" : "pass");
-  };
-
-  const onDown = (e: React.PointerEvent) => {
-    if (exiting) return;
-    startX.current = e.clientX;
-    setDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (startX.current === null || exiting) return;
-    setDx(e.clientX - startX.current);
-  };
-  const onUp = () => {
-    if (startX.current === null) return;
-    startX.current = null;
-    setDragging(false);
-    if (Math.abs(dx) > SWIPE_THRESHOLD_PX) {
-      vote(dx > 0);
-      return;
-    }
-    setDx(0);
   };
 
   const finish = async () => {
@@ -170,40 +212,13 @@ export default function Onboarding() {
 
   if (step === 1) {
     const look = LOOKS[idx];
-    const transform = exiting
-      ? exiting === "like"
-        ? "translateX(120%) rotate(12deg)"
-        : "translateX(-120%) rotate(-12deg)"
-      : `translateX(${dx}px) rotate(${dx / 25}deg)`;
     return (
       <main className="flex flex-1 flex-col p-4">
         <ProgressBar current={idx} total={LOOKS.length} />
-        {/* Cle sur idx : remonte le bloc a chaque look pour rejouer l'entree.
-            L'entree (animate-fade-in-up) est sur ce wrapper, separee de la carte
-            interne qui porte le transform de drag : les deux se marchent dessus
-            sinon (l'animation garde la main sur transform apres coup, cf both). */}
+        {/* Cle sur idx : remonte le bloc (et LookCard) a chaque look pour rejouer
+            l'entree et repartir de motion values fraiches. */}
         <div key={idx} className="relative flex-1 animate-fade-in-up">
-          <div
-            className={`relative h-full w-full touch-none select-none overflow-hidden rounded-2xl ${
-              dragging ? "" : "transition-[transform,opacity] duration-200 ease-out"
-            }`}
-            style={{ transform, opacity: exiting ? 0 : 1 }}
-            onPointerDown={onDown}
-            onPointerMove={onMove}
-            onPointerUp={onUp}
-            onPointerCancel={onUp}
-          >
-            <LookImage src={look.img} alt={look.label} />
-            <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
-              {look.label}
-            </p>
-            {(dx > BADGE_THRESHOLD_PX || exiting === "like") && (
-              <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
-            )}
-            {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && (
-              <Badge text="Passe" icon={<IconX className="h-4 w-4" />} cls="right-4 bg-ink" />
-            )}
-          </div>
+          <LookCard look={look} exiting={exiting} onDecide={vote} />
         </div>
         <div className="mt-4 flex justify-center gap-6">
           <button

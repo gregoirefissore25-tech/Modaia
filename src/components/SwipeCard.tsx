@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import type { PanInfo } from "motion/react";
 import type { Product } from "../lib/types";
 import { price } from "../lib/types";
 import { IconHeart, IconX } from "./icons";
@@ -15,17 +17,20 @@ export type SwipeCardProps = {
   onExited?: () => void;
 };
 
-const SWIPE_THRESHOLD_PX = 90;
+const SWIPE_DISTANCE_PX = 90;
+const SWIPE_VELOCITY_PX_S = 500; // un flick rapide declenche la decision meme sous la distance
 const BADGE_THRESHOLD_PX = 40;
-const EXIT_DURATION_MS = 220;
+const EXIT_DURATION_S = 0.28;
+const EXIT_SPRING = { type: "spring", stiffness: 300, damping: 30 } as const;
 
-const EXIT_TRANSFORMS: Record<SwipeAction, string> = {
-  like: "translateX(120%) rotate(12deg)",
-  pass: "translateX(-120%) rotate(-12deg)",
-  save: "translateY(-120%)"
+const EXIT_TARGET: Record<SwipeAction, { x: number; y: number }> = {
+  like: { x: 520, y: 0 },
+  pass: { x: -520, y: 0 },
+  save: { x: 0, y: -760 }
 };
 
-// Carte swipe : drag pointer + boutons. L'etiquette prix rotative est la signature visuelle.
+// Carte swipe : drag physique (ressort, flick par velocite) via motion.
+// L'etiquette prix rotative est la signature visuelle.
 export default function SwipeCard({
   product,
   onSwipe,
@@ -33,59 +38,57 @@ export default function SwipeCard({
   exiting = null,
   onExited
 }: SwipeCardProps) {
-  const [dx, setDx] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  // Reinitialise par remount : Explore pose key={product.id} sur chaque carte.
   const [loaded, setLoaded] = useState(false);
-  const startX = useRef<number | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const opacity = useMotionValue(1);
+  // Clampe : la rotation plafonne a +-16deg meme si x continue au-dela pendant la sortie.
+  const rotate = useTransform(x, [-300, 300], [-16, 16]);
 
-  // La sortie est calee sur la duree de la transition (setTimeout, robuste meme si
-  // prefers-reduced-motion coupe la transition).
+  // Sortie animee (ressort) vers la cible de l'action, puis retrait de la pile
+  // une fois la duree ecoulee (robuste meme si prefers-reduced-motion coupe l'anim).
   useEffect(() => {
-    if (!exiting || !onExited) return;
-    const timer = setTimeout(onExited, EXIT_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [exiting, onExited]);
+    if (!exiting) return;
+    const target = EXIT_TARGET[exiting];
+    const controls = [
+      animate(x, target.x, EXIT_SPRING),
+      animate(y, target.y, EXIT_SPRING),
+      animate(opacity, 0, { duration: 0.2 })
+    ];
+    const timer = setTimeout(() => onExited?.(), EXIT_DURATION_S * 1000);
+    return () => {
+      controls.forEach((c) => c.stop());
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exiting]);
 
-  const onDown = (e: React.PointerEvent) => {
-    if (exiting) return;
-    startX.current = e.clientX;
-    setDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onMove = (e: React.PointerEvent) => {
-    if (startX.current === null || exiting) return;
-    setDx(e.clientX - startX.current);
-  };
-  const onUp = () => {
-    if (startX.current === null) return;
-    startX.current = null;
-    setDragging(false);
-    if (Math.abs(dx) > SWIPE_THRESHOLD_PX) {
-      // Pas de reset de dx : la transition de sortie part de la position relachee.
-      onSwipe(dx > 0 ? "like" : "pass");
+  const handleDrag = (_: unknown, info: PanInfo) => setDragX(info.offset.x);
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.x > SWIPE_DISTANCE_PX || info.velocity.x > SWIPE_VELOCITY_PX_S) {
+      onSwipe("like");
       return;
     }
-    setDx(0); // snap-back anime (la transition se reactive hors drag)
+    if (info.offset.x < -SWIPE_DISTANCE_PX || info.velocity.x < -SWIPE_VELOCITY_PX_S) {
+      onSwipe("pass");
+      return;
+    }
+    setDragX(0); // sous le seuil : dragConstraints ramene x/y a 0 avec un ressort natif
   };
 
-  const transform = exiting
-    ? EXIT_TRANSFORMS[exiting]
-    : `translateX(${dx}px) rotate(${dx / 25}deg)`;
-  const handlers = interactive
-    ? { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp }
-    : {};
-
   return (
-    <div
-      className={`relative h-full w-full touch-none select-none overflow-hidden rounded-2xl bg-white shadow-xl ${
-        dragging ? "" : "transition-[transform,opacity] duration-200 ease-out"
-      } ${!interactive || exiting ? "pointer-events-none" : ""}`}
-      style={{ transform, opacity: exiting ? 0 : 1 }}
-      {...handlers}
+    <motion.div
+      className="relative h-full w-full touch-none select-none overflow-hidden rounded-2xl bg-white shadow-xl"
+      style={{ x, y, rotate, opacity, pointerEvents: !interactive || exiting ? "none" : undefined }}
+      drag={interactive && !exiting ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.7}
+      dragTransition={{ bounceStiffness: 420, bounceDamping: 32 }}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
     >
-      {/* Skeleton sous l'image le temps du chargement ; pointer-events-none pour
-          que le drag (pointer capture sur e.target) reste capte par l'img. */}
+      {/* Skeleton sous l'image le temps du chargement. */}
       {!loaded && <div className="skeleton pointer-events-none absolute inset-0" />}
       <img
         src={product.image_url}
@@ -101,13 +104,13 @@ export default function SwipeCard({
         <p className="text-xs uppercase tracking-widest text-blush">{product.brand} · {product.merchant}</p>
         <p className="font-display text-lg leading-tight">{product.title}</p>
       </div>
-      {(dx > BADGE_THRESHOLD_PX || exiting === "like") && (
+      {(dragX > BADGE_THRESHOLD_PX || exiting === "like") && (
         <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
       )}
-      {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && (
+      {(dragX < -BADGE_THRESHOLD_PX || exiting === "pass") && (
         <Badge text="Passe" icon={<IconX className="h-4 w-4" />} cls="right-4 bg-ink" />
       )}
-    </div>
+    </motion.div>
   );
 }
 
