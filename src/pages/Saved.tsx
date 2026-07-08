@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchSaved, goUrl } from "../lib/api";
-import { IconBookmark } from "../components/icons";
+import { IconBookmark, IconX } from "../components/icons";
 import type { Product } from "../lib/types";
 import { price } from "../lib/types";
 
@@ -14,10 +14,20 @@ const SKELETON_ROWS = 3;
 export default function Saved() {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<boolean>(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    fetchSaved()
+      .then(setItems)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
-    fetchSaved().then(setItems).finally(() => setLoading(false));
-  }, []);
+    load();
+  }, [load]);
 
   const byMerchant = items.reduce<Record<string, Product[]>>((acc, p) => {
     (acc[p.merchant] ||= []).push(p);
@@ -44,7 +54,25 @@ export default function Saved() {
         </ul>
       )}
 
-      {!loading && items.length === 0 && (
+      {!loading && error && (
+        <div className="flex animate-fade-in-up flex-col items-center px-6 pt-16 text-center">
+          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-seam bg-white text-smoke">
+            <IconX className="h-6 w-6" />
+          </span>
+          <h2 className="font-display text-xl">Connexion impossible</h2>
+          <p className="mt-2 max-w-[28ch] text-sm text-smoke">
+            Ton lookbook n'a pas pu être chargé. Vérifie ta connexion puis réessaie.
+          </p>
+          <button
+            onClick={load}
+            className="mt-4 rounded-full bg-klein px-5 py-2.5 text-sm text-chalk transition-transform duration-150 active:scale-95"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && items.length === 0 && (
         <div className="flex animate-fade-in-up flex-col items-center px-6 pt-16 text-center">
           <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blush/50 text-klein">
             <IconBookmark className="h-6 w-6" />
@@ -56,7 +84,7 @@ export default function Saved() {
         </div>
       )}
 
-      {!loading && items.length > 0 && (
+      {!loading && !error && items.length > 0 && (
         <div className="divide-y divide-seam">
           {Object.entries(byMerchant).map(([merchant, list]) => (
             <section key={merchant} className="animate-fade-in py-5 first:pt-0">

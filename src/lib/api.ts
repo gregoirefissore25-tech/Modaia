@@ -21,6 +21,7 @@ export async function fetchProducts(f: Filters): Promise<Product[]> {
     budget: String(f.budget)
   });
   const r = await fetch(`${FN}/products?${p}`);
+  if (!r.ok) throw new Error("Impossible de charger les produits");
   const d = await r.json();
   return d.products as Product[];
 }
@@ -35,6 +36,7 @@ export async function sendSwipe(productId: number, action: "like" | "pass" | "sa
 
 export async function fetchSaved(): Promise<Product[]> {
   const r = await fetch(`${FN}/saved?device=${deviceId()}`);
+  if (!r.ok) throw new Error("Impossible de charger le lookbook");
   const d = await r.json();
   return d.items as Product[];
 }

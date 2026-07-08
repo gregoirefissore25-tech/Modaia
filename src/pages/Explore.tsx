@@ -28,13 +28,17 @@ export default function Explore() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<boolean>(false);
   const [exiting, setExiting] = useState<SwipeAction | null>(null);
 
   const load = useCallback(async (f: Filters) => {
     setLoading(true);
+    setError(false);
     try {
       setStack(await fetchProducts(f));
       setExiting(null); // pile remplacee : aucune sortie en cours
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -101,6 +105,22 @@ export default function Explore() {
           })
         ) : loading ? (
           <div className="skeleton absolute inset-0" />
+        ) : error ? (
+          <div className="flex h-full animate-fade-in-up flex-col items-center justify-center gap-3 px-6 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full border border-seam bg-white text-smoke">
+              <IconX className="h-7 w-7" />
+            </span>
+            <p className="font-display text-xl">Connexion impossible</p>
+            <p className="max-w-[26ch] text-sm text-smoke">
+              Le feed n'a pas pu être chargé. Vérifie ta connexion puis réessaie.
+            </p>
+            <button
+              onClick={() => load(filters)}
+              className="mt-2 rounded-full bg-klein px-5 py-2.5 text-sm text-chalk transition-transform duration-150 active:scale-95"
+            >
+              Réessayer
+            </button>
+          </div>
         ) : (
           <div className="flex h-full animate-fade-in-up flex-col items-center justify-center gap-3 px-6 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blush/40 text-ink">
