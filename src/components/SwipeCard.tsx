@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Product } from "../lib/types";
 import { price } from "../lib/types";
+import { IconHeart, IconX } from "./icons";
 
 export type SwipeAction = "like" | "pass" | "save";
 
@@ -100,15 +101,22 @@ export default function SwipeCard({
         <p className="text-xs uppercase tracking-widest text-blush">{product.brand} · {product.merchant}</p>
         <p className="font-display text-lg leading-tight">{product.title}</p>
       </div>
-      {(dx > BADGE_THRESHOLD_PX || exiting === "like") && <Badge text="J'aime" cls="left-4 bg-klein" />}
-      {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && <Badge text="Passe" cls="right-4 bg-ink" />}
+      {(dx > BADGE_THRESHOLD_PX || exiting === "like") && (
+        <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
+      )}
+      {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && (
+        <Badge text="Passe" icon={<IconX className="h-4 w-4" />} cls="right-4 bg-ink" />
+      )}
     </div>
   );
 }
 
-function Badge({ text, cls }: { text: string; cls: string }) {
+function Badge({ text, icon, cls }: { text: string; icon: React.ReactNode; cls: string }) {
   return (
-    <span className={`absolute top-4 animate-scale-in rounded px-3 py-1 font-display text-chalk ${cls}`}>
+    <span
+      className={`absolute top-4 flex animate-scale-in items-center gap-1.5 rounded-full py-1.5 pl-3 pr-3.5 font-display text-chalk shadow-[0_6px_18px_-4px_rgba(20,19,18,0.4)] ${cls}`}
+    >
+      {icon}
       {text}
     </span>
   );

@@ -45,8 +45,10 @@ body {
 }
 
 .tag {
-  @apply absolute -right-2 top-6 bg-ink text-chalk px-3 py-2 rotate-3 shadow-lg;
+  @apply absolute -right-2 top-6 bg-ink text-chalk px-3 py-2 rotate-3;
   clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+  /* drop-shadow suit la decoupe du ticket (un box-shadow serait rogne par le clip-path) */
+  filter: drop-shadow(0 3px 8px rgba(20, 19, 18, 0.35));
 }
 
 /* Slider maison reutilisable (Onboarding, FilterSheet).
