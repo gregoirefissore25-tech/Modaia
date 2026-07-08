@@ -99,6 +99,7 @@ export default function Explore() {
                   interactive={isTop && !exiting}
                   exiting={isTop ? exiting : null}
                   onExited={handleExited}
+                  showDetails={isTop}
                 />
               </motion.div>
             );

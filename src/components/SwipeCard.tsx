@@ -15,6 +15,9 @@ export type SwipeCardProps = {
   /** Quand definie, la carte s'anime hors ecran puis previent le parent via onExited. */
   exiting?: SwipeAction | null;
   onExited?: () => void;
+  /** Cartes empilees derriere : juste la photo, sans legende (evite le chevauchement
+      de texte avec la carte du dessus, qui elle reste pleine opacite). */
+  showDetails?: boolean;
 };
 
 const SWIPE_DISTANCE_PX = 90;
@@ -36,7 +39,8 @@ export default function SwipeCard({
   onSwipe,
   interactive = true,
   exiting = null,
-  onExited
+  onExited,
+  showDetails = true
 }: SwipeCardProps) {
   const [loaded, setLoaded] = useState(false);
   const [dragX, setDragX] = useState(0);
@@ -99,11 +103,15 @@ export default function SwipeCard({
         }`}
         draggable={false}
       />
-      <div className="tag font-display text-lg">{price(product.price_cents, product.currency)}</div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/30 to-transparent p-5 pt-16 text-chalk">
-        <p className="text-xs uppercase tracking-[0.2em] text-blush">{product.brand} · {product.merchant}</p>
-        <p className="mt-1 font-display text-2xl leading-tight tracking-tight">{product.title}</p>
-      </div>
+      {showDetails && (
+        <>
+          <div className="tag font-display text-lg">{price(product.price_cents, product.currency)}</div>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 via-ink/30 to-transparent p-5 pt-16 text-chalk">
+            <p className="text-xs uppercase tracking-[0.2em] text-blush">{product.brand} · {product.merchant}</p>
+            <p className="mt-1 font-display text-2xl leading-tight tracking-tight">{product.title}</p>
+          </div>
+        </>
+      )}
       {(dragX > BADGE_THRESHOLD_PX || exiting === "like") && (
         <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
       )}

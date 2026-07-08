@@ -46,6 +46,7 @@ function LookImage({ src, alt }: { src: string; alt: string }) {
         src={src}
         alt={alt}
         onLoad={() => setLoaded(true)}
+        draggable={false}
         className={`h-full w-full object-cover transition-opacity duration-300 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
