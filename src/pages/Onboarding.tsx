@@ -24,6 +24,25 @@ const BUDGET_MIN_CENTS = 2000;
 const BUDGET_MAX_CENTS = 30000;
 const BUDGET_STEP_CENTS = 1000;
 
+// Photo de look avec skeleton le temps du chargement puis fondu.
+// L'etat loaded est reinitialise par le remount existant (key={idx} sur le bloc parent).
+function LookImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className="skeleton absolute inset-0" />}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </>
+  );
+}
+
 // Barre de progression en segments fins, style "stories" :
 // segments votes + courant en klein, segments a venir en seam.
 function ProgressBar({ current, total }: { current: number; total: number }) {
@@ -94,7 +113,7 @@ export default function Onboarding() {
         <ProgressBar current={idx} total={LOOKS.length} />
         {/* Cle sur idx : remonte le bloc a chaque look pour rejouer l'entree */}
         <div key={idx} className="relative flex-1 overflow-hidden rounded-2xl animate-fade-in-up">
-          <img src={look.img} alt={look.label} className="h-full w-full object-cover" />
+          <LookImage src={look.img} alt={look.label} />
           <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
             {look.label}
           </p>

@@ -34,6 +34,8 @@ export default function SwipeCard({
 }: SwipeCardProps) {
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
+  // Reinitialise par remount : Explore pose key={product.id} sur chaque carte.
+  const [loaded, setLoaded] = useState(false);
   const startX = useRef<number | null>(null);
 
   // La sortie est calee sur la duree de la transition (setTimeout, robuste meme si
@@ -81,10 +83,16 @@ export default function SwipeCard({
       style={{ transform, opacity: exiting ? 0 : 1 }}
       {...handlers}
     >
+      {/* Skeleton sous l'image le temps du chargement ; pointer-events-none pour
+          que le drag (pointer capture sur e.target) reste capte par l'img. */}
+      {!loaded && <div className="skeleton pointer-events-none absolute inset-0" />}
       <img
         src={product.image_url}
         alt={product.title}
-        className="h-full w-full object-cover"
+        onLoad={() => setLoaded(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
         draggable={false}
       />
       <div className="tag font-display text-lg">{price(product.price_cents, product.currency)}</div>
