@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { price, CATEGORIES, CATEGORY_LABELS } from "../lib/types";
 import Select from "../components/Select";
+import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
 
 type Stats = {
@@ -32,31 +33,44 @@ export default function Admin() {
   const [added, setAdded] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
+  // Etat partage entre "Entrer" et "Rafraichir" (les deux appellent loadStats)
+  const [statsLoading, setStatsLoading] = useState<boolean>(false);
+  const [adding, setAdding] = useState<boolean>(false);
 
   const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const loadStats = async () => {
-    const r = await fetch(`/.netlify/functions/admin?token=${encodeURIComponent(token)}`);
-    if (!r.ok) { setError("Token invalide"); return; }
-    setError("");
-    setUnlocked(true);
-    setStats(await r.json());
+    setStatsLoading(true);
+    try {
+      const r = await fetch(`/.netlify/functions/admin?token=${encodeURIComponent(token)}`);
+      if (!r.ok) { setError("Token invalide"); return; }
+      setError("");
+      setUnlocked(true);
+      setStats(await r.json());
+    } finally {
+      setStatsLoading(false);
+    }
   };
 
   const addProduct = async () => {
     setError("");
-    const r = await fetch("/.netlify/functions/import", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token, product: form })
-    });
-    const d = await r.json();
-    if (!r.ok) { setError("Erreur : " + (d.error || "inconnue")); return; }
-    setAdded((a) => [form.title, ...a]);
-    // garde categorie et genre pour enchainer plus vite
-    setForm((f) => ({ ...empty, category: f.category, gender: f.gender }));
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), TOAST_DURATION_MS);
+    setAdding(true);
+    try {
+      const r = await fetch("/.netlify/functions/import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, product: form })
+      });
+      const d = await r.json();
+      if (!r.ok) { setError("Erreur : " + (d.error || "inconnue")); return; }
+      setAdded((a) => [form.title, ...a]);
+      // garde categorie et genre pour enchainer plus vite
+      setForm((f) => ({ ...empty, category: f.category, gender: f.gender }));
+      setToastVisible(true);
+      setTimeout(() => setToastVisible(false), TOAST_DURATION_MS);
+    } finally {
+      setAdding(false);
+    }
   };
 
   if (!unlocked)
@@ -71,9 +85,16 @@ export default function Admin() {
           />
           <button
             onClick={loadStats}
-            className="rounded-lg bg-ink px-4 py-2 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+            disabled={statsLoading}
+            className="relative rounded-lg bg-ink px-4 py-2 font-semibold text-chalk transition-transform duration-150 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Entrer
+            {/* Libelle rendu invisible (pas retire) pour garder la largeur du bouton stable */}
+            <span className={statsLoading ? "invisible" : undefined}>Entrer</span>
+            {statsLoading && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Spinner />
+              </span>
+            )}
           </button>
         </div>
         {error && <p role="alert" className="mt-2 text-sm font-medium text-ink">{error}</p>}
@@ -136,9 +157,11 @@ export default function Admin() {
         </div>
         <button
           onClick={addProduct}
-          className="w-full rounded-xl bg-klein py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+          disabled={adding}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-klein py-2.5 font-semibold text-chalk transition-transform duration-150 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Ajouter à Modaia
+          {adding && <Spinner />}
+          {adding ? "Ajout en cours..." : "Ajouter à Modaia"}
         </button>
         {error && <p role="alert" className="mt-2 text-sm font-medium text-ink">{error}</p>}
         {added.length > 0 && (
@@ -154,9 +177,15 @@ export default function Admin() {
           <h2 className="font-display text-lg">Stats</h2>
           <button
             onClick={loadStats}
-            className="text-sm font-medium text-klein transition-transform duration-150 active:scale-95"
+            disabled={statsLoading}
+            className="relative text-sm font-medium text-klein transition-transform duration-150 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Rafraîchir
+            <span className={statsLoading ? "invisible" : undefined}>Rafraîchir</span>
+            {statsLoading && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Spinner />
+              </span>
+            )}
           </button>
         </div>
         {stats && (

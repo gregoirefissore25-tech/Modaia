@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveProfile } from "../lib/api";
+import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
 
 const SIZE_LABELS = { top: "Haut", bottom: "Bas", shoes: "Chaussures" } as const;
@@ -9,10 +10,16 @@ export default function Profile() {
     JSON.parse(localStorage.getItem("modaia_sizes") || '{"top":"","bottom":"","shoes":""}')
   );
   const [toastVisible, setToastVisible] = useState(false);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const save = async () => {
     localStorage.setItem("modaia_sizes", JSON.stringify(sizes));
-    await saveProfile({ sizes });
+    setSaving(true);
+    try {
+      await saveProfile({ sizes });
+    } finally {
+      setSaving(false);
+    }
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2000);
   };
@@ -36,9 +43,11 @@ export default function Profile() {
           ))}
           <button
             onClick={save}
-            className="w-full rounded-xl bg-ink py-2.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+            disabled={saving}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink py-2.5 font-semibold text-chalk transition-transform duration-150 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Enregistrer
+            {saving && <Spinner />}
+            {saving ? "Enregistrement..." : "Enregistrer"}
           </button>
         </div>
       </section>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { saveProfile } from "../lib/api";
 import { tapFeedback } from "../lib/haptics";
 import { IconHeart, IconX } from "../components/icons";
+import Spinner from "../components/Spinner";
 
 // Onboarding sans friction : 12 swipes de looks (infere le style_vector),
 // puis budget. Trois ecrans max avant le premier feed. Pas de formulaire de style.
@@ -72,6 +73,7 @@ export default function Onboarding() {
   const [idx, setIdx] = useState(0);
   const [vector, setVector] = useState<Record<string, number>>({});
   const [budget, setBudget] = useState(10000);
+  const [finishing, setFinishing] = useState<boolean>(false);
 
   const vote = (liked: boolean) => {
     tapFeedback();
@@ -83,7 +85,12 @@ export default function Onboarding() {
 
   const finish = async () => {
     localStorage.setItem("modaia_onboarded", "1");
-    await saveProfile({ budgetMaxCents: budget, styleVector: vector });
+    setFinishing(true);
+    try {
+      await saveProfile({ budgetMaxCents: budget, styleVector: vector });
+    } finally {
+      setFinishing(false);
+    }
     nav("/explore");
   };
 
@@ -158,9 +165,11 @@ export default function Onboarding() {
       />
       <button
         onClick={finish}
-        className="mt-10 rounded-xl bg-klein py-3.5 font-semibold text-chalk transition-transform duration-150 active:scale-95"
+        disabled={finishing}
+        className="mt-10 flex items-center justify-center gap-2 rounded-xl bg-klein py-3.5 font-semibold text-chalk transition-transform duration-150 enabled:active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Voir ma sélection
+        {finishing && <Spinner />}
+        {finishing ? "Préparation..." : "Voir ma sélection"}
       </button>
     </main>
   );
