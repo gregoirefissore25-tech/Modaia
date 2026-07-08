@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { motion } from "motion/react";
 import type { CSSProperties } from "react";
+import type { PanInfo } from "motion/react";
 import type { Filters } from "../lib/types";
 import { CATEGORIES, CATEGORY_LABELS } from "../lib/types";
 import { IconCheck } from "./icons";
@@ -11,31 +13,18 @@ type Props = {
 };
 
 const BUDGET_MAX_CENTS = 30000;
-// Duree de la transition de sortie ; le vrai onClose (demontage par le parent)
-// est appele apres ce delai, meme pattern que SwipeCard.
-const CLOSE_DURATION_MS = 200;
+const DISMISS_DISTANCE_PX = 120;
+const DISMISS_VELOCITY_PX_S = 600;
 
 export default function FilterSheet({ filters, onChange, onClose }: Props) {
-  const [closing, setClosing] = useState(false);
-
-  // Le demontage est cale sur la duree de la transition (setTimeout, robuste
-  // meme si prefers-reduced-motion coupe la transition).
-  useEffect(() => {
-    if (!closing) return;
-    const timer = setTimeout(onClose, CLOSE_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [closing, onClose]);
-
-  // Fermeture animee a la touche Echap.
+  // Fermeture a la touche Echap.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setClosing(true);
+      if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  const requestClose = () => setClosing(true);
+  }, [onClose]);
 
   const toggle = (cat: string) => {
     const has = filters.categories.includes(cat);
@@ -47,28 +36,40 @@ export default function FilterSheet({ filters, onChange, onClose }: Props) {
     });
   };
 
+  // Glisser la feuille vers le bas pour la fermer (comme un bottom sheet iOS/Android),
+  // en plus du clic exterieur/Echap/Enregistrer. Le parent doit envelopper ce composant
+  // dans <AnimatePresence> pour que exit/initial jouent au montage/demontage.
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.y > DISMISS_DISTANCE_PX || info.velocity.y > DISMISS_VELOCITY_PX_S) onClose();
+  };
+
   // Remplissage du track jusqu'a la valeur, lu par .range-klein via --range-fill
   const fillPct = (filters.budget / BUDGET_MAX_CENTS) * 100;
 
   return (
-    <div
-      className={
-        "fixed inset-0 z-20 flex items-end bg-ink/40 " +
-        (closing
-          ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out"
-          : "animate-fade-in")
-      }
-      onClick={requestClose}
+    <motion.div
+      className="fixed inset-0 z-20 flex items-end bg-ink/40"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      onClick={onClose}
     >
-      <div
-        className={
-          "w-full rounded-t-2xl bg-chalk p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl " +
-          (closing
-            ? "translate-y-full transition-transform duration-200 ease-out"
-            : "animate-slide-up")
-        }
+      <motion.div
+        className="w-full rounded-t-2xl bg-chalk p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-xl"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 380, damping: 34 }}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.55 }}
+        onDragEnd={handleDragEnd}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Poignee : affordance visuelle standard des bottom sheets, indique que la
+            feuille se glisse vers le bas pour se fermer. */}
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-seam" />
         <div className="mb-4 flex items-center justify-between">
           <button
             className="text-sm text-smoke transition-transform duration-150 active:scale-95"
@@ -79,7 +80,7 @@ export default function FilterSheet({ filters, onChange, onClose }: Props) {
           <p className="font-display">Filtres ({filters.categories.length})</p>
           <button
             className="text-sm font-semibold text-klein transition-transform duration-150 active:scale-95"
-            onClick={requestClose}
+            onClick={onClose}
           >
             Enregistrer
           </button>
@@ -126,7 +127,7 @@ export default function FilterSheet({ filters, onChange, onClose }: Props) {
             style={{ "--range-fill": `${fillPct}%` } as CSSProperties}
           />
         </label>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

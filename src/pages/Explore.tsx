@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import SwipeCard from "../components/SwipeCard";
 import type { SwipeAction } from "../components/SwipeCard";
 import FilterSheet from "../components/FilterSheet";
@@ -16,12 +17,11 @@ const defaultFilters = (): Filters => {
 const VISIBLE_CARDS = 3;
 const RELOAD_BELOW = 5;
 
-// Position, echelle et opacite d'une carte selon sa profondeur dans la pile.
-const DEPTH_CLASSES = [
-  "translate-y-0 scale-100 opacity-100",
-  "-translate-y-2 scale-[0.94] opacity-70",
-  "-translate-y-4 scale-[0.90] opacity-40"
-] as const;
+// Position, echelle et opacite d'une carte selon sa profondeur dans la pile (ressort).
+const DEPTH_SCALE = [1, 0.94, 0.9];
+const DEPTH_Y = [0, -8, -16];
+const DEPTH_OPACITY = [1, 0.7, 0.4];
+const DEPTH_SPRING = { type: "spring", stiffness: 300, damping: 30 } as const;
 
 export default function Explore() {
   const [stack, setStack] = useState<Product[]>([]);
@@ -83,15 +83,15 @@ export default function Explore() {
         {stack.length > 0 ? (
           stack.slice(0, VISIBLE_CARDS).map((product, i) => {
             // Pendant la sortie de la carte du dessus, les suivantes avancent deja d'un cran.
-            const depth = exiting && i > 0 ? i - 1 : i;
+            const depth = Math.min(exiting && i > 0 ? i - 1 : i, DEPTH_SCALE.length - 1);
             const isTop = i === 0;
             return (
-              <div
+              <motion.div
                 key={product.id}
-                className={`absolute inset-0 transition-[transform,opacity] duration-300 ease-out ${
-                  DEPTH_CLASSES[Math.min(depth, DEPTH_CLASSES.length - 1)]
-                }`}
+                className="absolute inset-0"
                 style={{ zIndex: VISIBLE_CARDS - i }}
+                animate={{ scale: DEPTH_SCALE[depth], y: DEPTH_Y[depth], opacity: DEPTH_OPACITY[depth] }}
+                transition={DEPTH_SPRING}
               >
                 <SwipeCard
                   product={product}
@@ -100,7 +100,7 @@ export default function Explore() {
                   exiting={isTop ? exiting : null}
                   onExited={handleExited}
                 />
-              </div>
+              </motion.div>
             );
           })
         ) : loading ? (
@@ -149,9 +149,11 @@ export default function Explore() {
         Modaia touche une commission sur les achats effectués via ses liens.
       </p>
 
-      {showFilters && (
-        <FilterSheet filters={filters} onChange={setFilters} onClose={() => setShowFilters(false)} />
-      )}
+      <AnimatePresence>
+        {showFilters && (
+          <FilterSheet filters={filters} onChange={setFilters} onClose={() => setShowFilters(false)} />
+        )}
+      </AnimatePresence>
     </main>
   );
 }
