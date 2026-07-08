@@ -5,6 +5,7 @@ import type { SwipeAction } from "../components/SwipeCard";
 import FilterSheet from "../components/FilterSheet";
 import { IconArrowUp, IconFilter, IconHeart, IconSparkles, IconX } from "../components/icons";
 import { fetchProducts, sendSwipe } from "../lib/api";
+import { tapFeedback } from "../lib/haptics";
 import type { Filters, Product } from "../lib/types";
 
 const defaultFilters = (): Filters => {
@@ -49,6 +50,7 @@ export default function Explore() {
   // Declenche l'animation de sortie ; le retrait de la pile attend onExited.
   const act = (action: SwipeAction) => {
     if (!current || exiting) return;
+    tapFeedback();
     sendSwipe(current.id, action);
     setExiting(action);
   };

@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { saveProfile } from "../lib/api";
+import { tapFeedback } from "../lib/haptics";
 import { IconHeart, IconX } from "../components/icons";
 
 // Onboarding sans friction : 12 swipes de looks (infere le style_vector),
@@ -73,6 +74,7 @@ export default function Onboarding() {
   const [budget, setBudget] = useState(10000);
 
   const vote = (liked: boolean) => {
+    tapFeedback();
     const tag = LOOKS[idx].tag;
     if (liked) setVector((v) => ({ ...v, [tag]: (v[tag] || 0) + 1 }));
     if (idx + 1 >= LOOKS.length) setStep(2);
