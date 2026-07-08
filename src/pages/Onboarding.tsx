@@ -35,6 +35,12 @@ const BUDGET_MIN_CENTS = 2000;
 const BUDGET_MAX_CENTS = 30000;
 const BUDGET_STEP_CENTS = 1000;
 
+// Revelation en cascade du hero d'intro (chaque enfant suit avec staggerChildren).
+const HERO_ITEM = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 32 } }
+} as const;
+
 // Photo de look avec skeleton le temps du chargement puis fondu.
 // L'etat loaded est reinitialise par le remount existant (key={idx} sur le bloc parent).
 function LookImage({ src, alt }: { src: string; alt: string }) {
@@ -193,23 +199,32 @@ export default function Onboarding() {
   if (step === 0)
     return (
       <main className="flex flex-1 flex-col justify-center p-8">
-        <div className="flex flex-col animate-fade-in-up">
-          <p className="mb-8 text-xs font-semibold uppercase tracking-[0.35em] text-smoke">Modaia</p>
-          <h1 className="font-display text-6xl leading-[0.96] tracking-tight">
+        <motion.div
+          className="flex flex-col"
+          initial="hidden"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } } }}
+        >
+          <motion.p variants={HERO_ITEM} className="mb-8 text-xs font-semibold uppercase tracking-[0.35em] text-smoke">
+            Modaia
+          </motion.p>
+          <motion.h1 variants={HERO_ITEM} className="font-display text-6xl leading-[0.96] tracking-tight">
             Ton style,
             <br />
             <span className="text-klein">en un swipe.</span>
-          </h1>
-          <p className="mt-7 max-w-[30ch] text-smoke">
+          </motion.h1>
+          <motion.p variants={HERO_ITEM} className="mt-7 max-w-[30ch] text-smoke">
             12 looks pour cerner ton style. Ensuite, on te propose uniquement ce qui te ressemble.
-          </p>
-          <button
+          </motion.p>
+          <motion.button
+            variants={HERO_ITEM}
+            whileTap={{ scale: 0.96 }}
             onClick={() => setStep(1)}
-            className="mt-12 rounded-sm bg-ink py-4 text-sm font-semibold uppercase tracking-[0.15em] text-chalk transition-transform duration-150 active:scale-[0.97]"
+            className="mt-12 rounded-sm bg-ink py-4 text-sm font-semibold uppercase tracking-[0.15em] text-chalk"
           >
             C'est parti
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </main>
     );
 

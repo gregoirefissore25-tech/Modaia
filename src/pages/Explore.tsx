@@ -147,7 +147,7 @@ export default function Explore() {
         <Action label="J'aime" onClick={() => act("like")} cls="border-ink text-ink" icon={<IconArrowUp className="h-5 w-5" />} />
       </div>
       <p className="mt-3 text-center text-xs text-smoke">
-        Modaia touche une commission sur les achats effectués via ses liens.
+        Liens affiliés · commission sans surcoût pour toi.
       </p>
 
       <AnimatePresence>

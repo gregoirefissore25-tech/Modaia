@@ -18,7 +18,7 @@ export const handler: Handler = async (event) => {
     from swipes s
     join products p on p.id = s.product_id
     join merchants m on m.id = p.merchant_id
-    where s.user_id = ${userId} and s.action in ('like','save')
+    where s.user_id = ${userId} and s.action = 'save'
     order by m.name, s.created_at desc
   `;
   return json(200, { items: rows });

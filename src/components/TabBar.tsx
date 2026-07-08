@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { motion } from "motion/react";
 import { IconBookmark, IconCompass, IconUser } from "./icons";
 
 interface Tab {
@@ -14,6 +15,8 @@ const tabs: Tab[] = [
   { to: "/profile", label: "Profil", icon: IconUser }
 ];
 
+const INDICATOR_SPRING = { type: "spring", stiffness: 380, damping: 34 } as const;
+
 export default function TabBar() {
   const { pathname } = useLocation();
   const activeIndex = tabs.findIndex(
@@ -23,28 +26,29 @@ export default function TabBar() {
   return (
     <nav className="relative flex border-t border-seam bg-chalk pb-[env(safe-area-inset-bottom)]">
       {activeIndex !== -1 && (
-        <span
+        <motion.span
           aria-hidden="true"
-          className="absolute left-0 top-0 flex justify-center transition-transform duration-300 ease-[cubic-bezier(.22,.61,.36,1)]"
-          style={{
-            width: `${100 / tabs.length}%`,
-            transform: `translateX(${activeIndex * 100}%)`
-          }}
+          className="absolute left-0 top-0 flex justify-center"
+          style={{ width: `${100 / tabs.length}%` }}
+          animate={{ x: `${activeIndex * 100}%` }}
+          transition={INDICATOR_SPRING}
         >
           <span className="h-0.5 w-9 rounded-full bg-klein" />
-        </span>
+        </motion.span>
       )}
       {tabs.map((t) => (
         <NavLink
           key={t.to}
           to={t.to}
           className={({ isActive }) =>
-            "flex flex-1 flex-col items-center gap-1 pb-2 pt-2.5 text-center text-xs font-medium transition-colors duration-150 " +
+            "flex flex-1 justify-center pb-2 pt-2.5 text-center text-xs font-medium transition-colors duration-150 " +
             (isActive ? "text-klein" : "text-smoke")
           }
         >
-          <t.icon className="h-[22px] w-[22px]" />
-          {t.label}
+          <motion.span whileTap={{ scale: 0.85 }} className="flex flex-col items-center gap-1">
+            <t.icon className="h-[22px] w-[22px]" />
+            {t.label}
+          </motion.span>
         </NavLink>
       ))}
     </nav>

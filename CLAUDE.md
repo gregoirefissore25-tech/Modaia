@@ -17,6 +17,7 @@ Positionnement : marché francophone d'abord (océan Indien, Afrique francophone
 - Identité V1 : device_id en localStorage (clés préfixées modaia_), échangé contre un uuid user en base
 - Tout lien sortant vers un marchand passe par /api/go (jamais de lien direct), subid = uuid du clic
 - Prix toujours en cents en base et en API, formatés côté front via price()
+- 3 actions de swipe distinctes (swipes.action) : `pass` (exclu du feed, rien d'autre), `like` (exclu du feed + alimente style_vector en direct, n'apparait PAS dans le Lookbook), `save` (exclu du feed + apparait dans le Lookbook /saved, ne touche pas style_vector). Voir swipe.ts et saved.ts.
 
 ## Backlog
 
