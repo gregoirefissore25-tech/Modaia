@@ -111,7 +111,7 @@ export default function SwipeCard({
   );
 }
 
-function Badge({ text, icon, cls }: { text: string; icon: React.ReactNode; cls: string }) {
+export function Badge({ text, icon, cls }: { text: string; icon: React.ReactNode; cls: string }) {
   return (
     <span
       className={`absolute top-4 flex animate-scale-in items-center gap-1.5 rounded-full py-1.5 pl-3 pr-3.5 font-display text-chalk shadow-[0_6px_18px_-4px_rgba(20,19,18,0.4)] ${cls}`}

@@ -1,8 +1,9 @@
-import { useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { saveProfile } from "../lib/api";
 import { tapFeedback } from "../lib/haptics";
 import { IconHeart, IconX } from "../components/icons";
+import { Badge } from "../components/SwipeCard";
 import Spinner from "../components/Spinner";
 
 // Onboarding sans friction : 12 swipes de looks (infere le style_vector),
@@ -21,6 +22,10 @@ const LOOKS = [
   { tag: "sport", img: "https://picsum.photos/seed/look11/600/800", label: "Techwear léger" },
   { tag: "casual", img: "https://picsum.photos/seed/look12/600/800", label: "Lin d'été" }
 ];
+
+const SWIPE_THRESHOLD_PX = 90;
+const BADGE_THRESHOLD_PX = 40;
+const EXIT_DURATION_MS = 220;
 
 const BUDGET_MIN_CENTS = 2000;
 const BUDGET_MAX_CENTS = 30000;
@@ -75,12 +80,60 @@ export default function Onboarding() {
   const [budget, setBudget] = useState(10000);
   const [finishing, setFinishing] = useState<boolean>(false);
 
+  // Drag au doigt, meme mecanique que SwipeCard (feed principal) : relache sous le
+  // seuil = snap-back anime, au-dela = decision + sortie animee avant de passer au look suivant.
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [exiting, setExiting] = useState<"like" | "pass" | null>(null);
+  const startX = useRef<number | null>(null);
+
+  // Avance au look suivant (ou a l'ecran budget si c'etait le dernier), une fois la
+  // sortie animee terminee.
+  const advance = useCallback(() => {
+    setExiting(null);
+    setDx(0);
+    setIdx((i) => {
+      if (i + 1 >= LOOKS.length) {
+        setStep(2);
+        return i;
+      }
+      return i + 1;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!exiting) return;
+    const timer = setTimeout(advance, EXIT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [exiting, advance]);
+
   const vote = (liked: boolean) => {
+    if (exiting) return;
     tapFeedback();
     const tag = LOOKS[idx].tag;
     if (liked) setVector((v) => ({ ...v, [tag]: (v[tag] || 0) + 1 }));
-    if (idx + 1 >= LOOKS.length) setStep(2);
-    else setIdx(idx + 1);
+    setExiting(liked ? "like" : "pass");
+  };
+
+  const onDown = (e: React.PointerEvent) => {
+    if (exiting) return;
+    startX.current = e.clientX;
+    setDragging(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (startX.current === null || exiting) return;
+    setDx(e.clientX - startX.current);
+  };
+  const onUp = () => {
+    if (startX.current === null) return;
+    startX.current = null;
+    setDragging(false);
+    if (Math.abs(dx) > SWIPE_THRESHOLD_PX) {
+      vote(dx > 0);
+      return;
+    }
+    setDx(0);
   };
 
   const finish = async () => {
@@ -117,15 +170,40 @@ export default function Onboarding() {
 
   if (step === 1) {
     const look = LOOKS[idx];
+    const transform = exiting
+      ? exiting === "like"
+        ? "translateX(120%) rotate(12deg)"
+        : "translateX(-120%) rotate(-12deg)"
+      : `translateX(${dx}px) rotate(${dx / 25}deg)`;
     return (
       <main className="flex flex-1 flex-col p-4">
         <ProgressBar current={idx} total={LOOKS.length} />
-        {/* Cle sur idx : remonte le bloc a chaque look pour rejouer l'entree */}
-        <div key={idx} className="relative flex-1 overflow-hidden rounded-2xl animate-fade-in-up">
-          <LookImage src={look.img} alt={look.label} />
-          <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
-            {look.label}
-          </p>
+        {/* Cle sur idx : remonte le bloc a chaque look pour rejouer l'entree.
+            L'entree (animate-fade-in-up) est sur ce wrapper, separee de la carte
+            interne qui porte le transform de drag : les deux se marchent dessus
+            sinon (l'animation garde la main sur transform apres coup, cf both). */}
+        <div key={idx} className="relative flex-1 animate-fade-in-up">
+          <div
+            className={`relative h-full w-full touch-none select-none overflow-hidden rounded-2xl ${
+              dragging ? "" : "transition-[transform,opacity] duration-200 ease-out"
+            }`}
+            style={{ transform, opacity: exiting ? 0 : 1 }}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+          >
+            <LookImage src={look.img} alt={look.label} />
+            <p className="absolute bottom-4 left-4 rounded bg-ink/70 px-3 py-1 font-display text-chalk">
+              {look.label}
+            </p>
+            {(dx > BADGE_THRESHOLD_PX || exiting === "like") && (
+              <Badge text="J'aime" icon={<IconHeart className="h-4 w-4" />} cls="left-4 bg-klein" />
+            )}
+            {(dx < -BADGE_THRESHOLD_PX || exiting === "pass") && (
+              <Badge text="Passe" icon={<IconX className="h-4 w-4" />} cls="right-4 bg-ink" />
+            )}
+          </div>
         </div>
         <div className="mt-4 flex justify-center gap-6">
           <button
