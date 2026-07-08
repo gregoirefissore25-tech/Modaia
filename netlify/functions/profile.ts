@@ -1,12 +1,12 @@
 // GET/POST /api/profile
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, json } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, json } from "./_db";
 
 export const handler: Handler = async (event) => {
   const q = event.queryStringParameters || {};
   const body = event.httpMethod === "POST" ? JSON.parse(event.body || "{}") : {};
   const device = q.device || body.device;
-  if (!device) return json(400, { error: "device requis" });
+  if (!isValidDeviceId(device)) return json(400, { error: "device invalide" });
   const userId = await getOrCreateUser(device);
 
   if (event.httpMethod === "POST") {

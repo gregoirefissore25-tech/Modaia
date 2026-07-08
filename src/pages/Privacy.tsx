@@ -13,7 +13,7 @@ const SECTIONS: { title: string; body: string }[] = [
   },
   {
     title: "Tes droits",
-    body: "Accès, rectification, suppression : écris à privacy@modaia.org avec ton identifiant (Profil). Réponse sous 30 jours.",
+    body: "Accès (savoir ce qu'on détient sur toi), rectification (corriger une donnée), effacement (supprimer ton compte et tes données), limitation (geler temporairement leur usage), portabilité (les récupérer dans un format réutilisable) et opposition (refuser la mesure des clics affiliés à tout moment, via le bandeau de consentement ou en nous écrivant). Pour exercer un droit : écris à privacy@modaia.org avec ton identifiant (Profil). Réponse sous 30 jours.",
   },
   {
     title: "Affiliation",

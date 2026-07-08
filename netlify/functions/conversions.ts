@@ -4,6 +4,16 @@ import { sql, json } from "./_db";
 
 export const handler: Handler = async (event) => {
   const q = event.queryStringParameters || {};
+
+  // Verification optionnelle : le subid/clickref (uuid) transite dans l'url de
+  // redirection affiliee, donc potentiellement visible par l'utilisateur final, qui
+  // pourrait rejouer cet appel pour forger une fausse conversion. Si POSTBACK_SECRET
+  // est configure (variable d'env Netlify), on exige aussi ce secret en query param
+  // (a ajouter au template d'URL de postback configure cote Awin/Skimlinks). Tant que
+  // la variable n'est pas definie, le comportement reste inchange (retro-compatible).
+  const postbackSecret = process.env.POSTBACK_SECRET;
+  if (postbackSecret && q.secret !== postbackSecret) return json(401, { error: "non autorise" });
+
   const clickref = q.clickref || q.xcust;
   if (!clickref) return json(400, { error: "clickref requis" });
 

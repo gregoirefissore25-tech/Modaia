@@ -1,11 +1,11 @@
 // GET /api/products?device=xxx&gender=women&categories=dress,top&budget=5000
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, json } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, json } from "./_db";
 
 export const handler: Handler = async (event) => {
   const p = event.queryStringParameters || {};
   const device = p.device;
-  if (!device) return json(400, { error: "device requis" });
+  if (!isValidDeviceId(device)) return json(400, { error: "device invalide" });
 
   const userId = await getOrCreateUser(device);
   const gender = p.gender || "women";

@@ -1,10 +1,10 @@
 // GET /api/saved?device=xxx
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, json } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, json } from "./_db";
 
 export const handler: Handler = async (event) => {
   const device = (event.queryStringParameters || {}).device;
-  if (!device) return json(400, { error: "device requis" });
+  if (!isValidDeviceId(device)) return json(400, { error: "device invalide" });
 
   const userId = await getOrCreateUser(device);
   const rows = await sql`

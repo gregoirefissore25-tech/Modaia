@@ -3,6 +3,15 @@ import type { HandlerResponse } from "@netlify/functions";
 
 export const sql = neon(process.env.DATABASE_URL as string);
 
+// device_id est genere client-side via crypto.randomUUID() (voir src/lib/api.ts) :
+// on valide ce format cote serveur avant de creer un utilisateur, pour ne pas laisser
+// n'importe quelle chaine arbitraire non authentifiee peupler la table users.
+const DEVICE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidDeviceId(device: unknown): device is string {
+  return typeof device === "string" && DEVICE_ID_RE.test(device);
+}
+
 export async function getOrCreateUser(deviceId: string): Promise<string> {
   const rows = await sql`
     insert into users (device_id) values (${deviceId})
