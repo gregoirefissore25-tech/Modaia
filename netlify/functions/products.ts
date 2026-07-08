@@ -1,11 +1,16 @@
 // GET /api/products?device=xxx&gender=women&categories=dress,top&budget=5000
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, isValidDeviceId, json } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, checkRateLimit, json } from "./_db";
+
+const RATE_LIMIT_MAX = 60;
+const RATE_LIMIT_WINDOW_S = 300;
 
 export const handler: Handler = async (event) => {
   const p = event.queryStringParameters || {};
   const device = p.device;
   if (!isValidDeviceId(device)) return json(400, { error: "device invalide" });
+  if (!(await checkRateLimit("products", event, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_S)))
+    return json(429, { error: "trop de requetes, reessaie dans quelques minutes" });
 
   const userId = await getOrCreateUser(device);
   const gender = p.gender || "women";

@@ -1,12 +1,17 @@
 // GET /api/go?device=xxx&pid=123 : redirection affiliee trackee
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, isValidDeviceId } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, checkRateLimit } from "./_db";
+
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_S = 300;
 
 export const handler: Handler = async (event) => {
   const q = event.queryStringParameters || {};
   const device = q.device;
   const pid = Number(q.pid);
   if (!isValidDeviceId(device) || !pid) return { statusCode: 400, body: "parametres invalides" };
+  if (!(await checkRateLimit("go", event, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_S)))
+    return { statusCode: 429, body: "trop de requetes, reessaie dans quelques minutes" };
 
   const userId = await getOrCreateUser(device);
   const rows = await sql`select product_url, affiliate_url from products where id = ${pid}`;

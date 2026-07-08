@@ -1,12 +1,17 @@
 // GET/POST /api/profile
 import type { Handler } from "@netlify/functions";
-import { sql, getOrCreateUser, isValidDeviceId, json } from "./_db";
+import { sql, getOrCreateUser, isValidDeviceId, checkRateLimit, json } from "./_db";
+
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_S = 300;
 
 export const handler: Handler = async (event) => {
   const q = event.queryStringParameters || {};
   const body = event.httpMethod === "POST" ? JSON.parse(event.body || "{}") : {};
   const device = q.device || body.device;
   if (!isValidDeviceId(device)) return json(400, { error: "device invalide" });
+  if (!(await checkRateLimit("profile", event, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_S)))
+    return json(429, { error: "trop de requetes, reessaie dans quelques minutes" });
   const userId = await getOrCreateUser(device);
 
   if (event.httpMethod === "POST") {

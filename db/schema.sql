@@ -73,3 +73,11 @@ create table if not exists conversions (
   commission_cents int,
   reported_at timestamptz default now()
 );
+
+-- R2 : rate limiting par IP sur les endpoints publics (voir _db.ts checkRateLimit).
+-- Fenetre fixe : window_start/count remis a zero des que la fenetre est expiree.
+create table if not exists rate_limits (
+  key text primary key,                         -- "<endpoint>:<ip>"
+  window_start timestamptz not null default now(),
+  count int not null default 0
+);

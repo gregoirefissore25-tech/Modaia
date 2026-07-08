@@ -29,9 +29,9 @@ Awin datafeeds CSV/gz via AWIN_FEED_URLS, mapping catégories, tags de style, up
 
 ### R1 - RGPD [FAIT en V1 - ConsentBanner, page /confidentialite (droits art.15-21 listés individuellement), purge clics >13 mois dans feed-sync. Reste : registre des traitements, DPA Neon/Netlify]
 
-### R2 - Durcissement anti-abus [PARTIEL]
-Fait : validation format device_id (uuid) côté serveur sur tous les endpoints (products/saved/swipe/profile/go), sinon n'importe quelle chaîne arbitraire peuplait la table users sans contrôle. Postback conversions (conversions.ts) protégé par un secret optionnel `POSTBACK_SECRET` (query param `secret`, no-op tant que la variable d'env n'est pas définie ; si activé, mettre à jour le template d'URL de postback côté Awin/Skimlinks).
-Reste (accepté comme limite V1, pas de solution retenue pour l'instant) : aucun rate limiting par IP/device sur les endpoints d'écriture (swipe, profile, go) - un script pourrait spammer des faux users/clics. Nécessiterait soit une regle Netlify (edge rate limiting), soit un compteur en base (latence/coût supplémentaire par requête) : à réévaluer si abus constaté dans les stats admin.
+### R2 - Durcissement anti-abus [FAIT]
+Validation format device_id (uuid) côté serveur sur tous les endpoints (products/saved/swipe/profile/go), sinon n'importe quelle chaîne arbitraire peuplait la table users sans contrôle. Postback conversions (conversions.ts) protégé par un secret optionnel `POSTBACK_SECRET` (query param `secret`, no-op tant que la variable d'env n'est pas définie ; si activé, mettre à jour le template d'URL de postback côté Awin/Skimlinks).
+Rate limiting par IP (table `rate_limits`, fenêtre fixe, fail-open si la table est absente ou en cas d'erreur DB) sur products/saved/swipe/profile/go. **Nécessite `npm run db:push` avant déploiement** pour créer la table, sinon le rate limiting est simplement inactif (fail-open, aucune casse) jusqu'à la migration.
 
 ### F4 - Auth réelle [A FAIRE]
 Clerk (plan gratuit) : lier device_id -> user Clerk à la première connexion, merger les swipes.
