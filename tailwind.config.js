@@ -6,7 +6,7 @@ export default {
       colors: {
         chalk: "#FAF8F4",
         ink: "#141312",
-        smoke: "#8A857C",
+        smoke: "#6E685F",
         seam: "#E7E2D8",
         klein: "#2B36C9",
         blush: "#E8D5C4"
