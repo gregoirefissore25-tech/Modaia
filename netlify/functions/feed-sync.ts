@@ -31,6 +31,13 @@ export const handler: Handler = async () => {
 // plusieurs colonnes dans l'ordre plutot que de perdre tout le flux.
 const KIDS_RE = /\benfant|gar[çc]on|\bfille\b|b[ée]b[ée]|\bkids?\b|\bjunior\b/i;
 
+// Un flux liste souvent une ligne par taille (meme photo, meme couleur, seul le
+// "Taille S/M/L" change en fin de titre) : sans ca, swiper donne l'impression de
+// voir le meme article en boucle. On ne garde que la 1re variante par modele.
+const SIZE_SUFFIX_RE = /\s*-\s*(taille|size)\s*[:\-]?\s*\S+\s*$/i;
+const baseProductKey = (merchantId: number, title: string): string =>
+  `${merchantId}::${title.replace(SIZE_SUFFIX_RE, "").trim().toLowerCase()}`;
+
 interface ProductRow {
   merchant_id: number;
   external_id: string;
@@ -49,6 +56,7 @@ interface ProductRow {
 export async function ingest(csvText: string): Promise<number> {
   const records = parseCsv(csvText);
   const seenMerchants = new Map<string, number>();
+  const seenProducts = new Set<string>();
   const batch: ProductRow[] = [];
   let count = 0;
 
@@ -95,6 +103,10 @@ export async function ingest(csvText: string): Promise<number> {
       suitableFor === "male" ? "men" :
       suitableFor === "female" ? "women" :
       /homme|men|male/i.test(categoryText) ? "men" : "women";
+
+    const productKey = baseProductKey(merchantId as number, r.product_name || "");
+    if (seenProducts.has(productKey)) continue; // variante taille/couleur deja vue
+    seenProducts.add(productKey);
 
     batch.push({
       merchant_id: merchantId as number,
