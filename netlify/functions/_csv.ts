@@ -38,7 +38,7 @@ export function mapCategory(raw: string): string | null {
   if (/maillot|swim|bikini/.test(s)) return "swim";
   if (/sport|active|legging|yoga/.test(s)) return "active";
   if (/\bsacs?\b|sacoche|maroquinerie|\bbags?\b|ceinture|belt|bijou|jewel|lunette|foulard|[ée]charpe|\bgants?\b|chapeau|casquette|portefeuille|bagagerie|accessoires? de mode|fashion accessor/.test(s)) return "accessories";
-  if (/top|shirt|blouse|pull|sweat|tee|haut|chemise|cardigan|veste|jacket|manteau|coat/.test(s)) return "top";
+  if (/top|shirt|blouse|pull|sweat|tee|haut|chemise|cardigan|veste|jacket|manteau|coat|polo/.test(s)) return "top";
   return null;
 }
 
