@@ -38,8 +38,16 @@ export function mapCategory(raw: string): string | null {
   if (/maillot|swim|bikini/.test(s)) return "swim";
   if (/sport|active|legging|yoga/.test(s)) return "active";
   if (/\bsacs?\b|sacoche|maroquinerie|\bbags?\b|ceinture|belt|bijou|jewel|lunette|foulard|[ée]charpe|\bgants?\b|chapeau|casquette|portefeuille|bagagerie|accessoires? de mode|fashion accessor/.test(s)) return "accessories";
-  if (/top|shirt|blouse|pull|sweat|tee|haut|chemise|cardigan|veste|jacket|manteau|coat|polo/.test(s)) return "top";
+  if (/top|shirt|blouse|pull|sweat|tee|haut|chemise|cardigan|veste|jacket|manteau|coat|polo|suit|tuxedo|costume|smoking|blazer/.test(s)) return "top";
   return null;
+}
+
+// "69.00 USD" -> { amount: 69, currency: "USD" } (format Google Shopping ; les
+// flux Awin natifs ont deja search_price et currency separes).
+export function parsePriceWithCurrency(raw: string): { amount: number; currency: string | null } {
+  const match = (raw || "").trim().match(/^([\d.,]+)\s*([A-Z]{3})?$/);
+  if (!match) return { amount: parseFloat(raw) || 0, currency: null };
+  return { amount: parseFloat(match[1].replace(",", ".")) || 0, currency: match[2] || null };
 }
 
 // Tags de style deduits du titre produit (pour le scoring F2)

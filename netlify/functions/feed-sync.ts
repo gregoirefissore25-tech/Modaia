@@ -2,7 +2,7 @@
 import type { Handler } from "@netlify/functions";
 import { gunzipSync } from "node:zlib";
 import { sql } from "./_db";
-import { parseCsv, mapCategory, extractTags } from "./_csv";
+import { parseCsv, mapCategory, extractTags, parsePriceWithCurrency } from "./_csv";
 
 // Insertion par lots (jsonb_to_recordset) : un feed de plusieurs milliers de lignes
 // en aller-retours un par un depassait le timeout de la function (502 constate en
@@ -31,10 +31,13 @@ export const handler: Handler = async () => {
 // plusieurs colonnes dans l'ordre plutot que de perdre tout le flux.
 const KIDS_RE = /\benfant|gar[çc]on|\bfille\b|b[ée]b[ée]|\bkids?\b|\bjunior\b/i;
 
-// Un flux liste souvent une ligne par taille (meme photo, meme couleur, seul le
-// "Taille S/M/L" change en fin de titre) : sans ca, swiper donne l'impression de
-// voir le meme article en boucle. On ne garde que la 1re variante par modele.
-const SIZE_SUFFIX_RE = /\s*-\s*(taille|size)\s*[:\-]?\s*\S+\s*$/i;
+// Un flux liste souvent une ligne par taille (meme photo, meme couleur, seule la
+// taille change en fin de titre) : sans ca, swiper donne l'impression de voir le
+// meme article en boucle. Deux conventions rencontrees : "- Taille L" / "- Size M"
+// (Vilebrequin) et "- Brown / XS" (Tiavllya, couleur puis taille apres un "/").
+// On ne garde que la 1re variante par modele (la couleur, elle, reste distincte).
+const SIZE_SUFFIX_RE =
+  /\s*-\s*(taille|size)\s*[:\-]?\s*\S+\s*$|\s*\/\s*(xxs|xs|s|m|l|xl|xxl|xxxl|\dxl|\d{1,3})\s*$/i;
 const baseProductKey = (merchantId: number, title: string): string =>
   `${merchantId}::${title.replace(SIZE_SUFFIX_RE, "").trim().toLowerCase()}`;
 
@@ -51,6 +54,63 @@ interface ProductRow {
   product_url: string;
   affiliate_url: string;
   tags: string[];
+}
+
+// Deux formats de flux coexistent chez les annonceurs Awin : le format natif Awin
+// (colonnes aw_product_id/search_price/category_name/merchant_name...) et le format
+// Google Shopping/Merchant Center (colonnes id/title/price/google_product_category/
+// advertiser_name...) que plusieurs annonceurs utilisent aussi (ex. Tiavllya). On
+// normalise les deux vers la meme forme avant le reste du traitement.
+interface NormalizedRecord {
+  externalId: string;
+  title: string;
+  merchantName: string;
+  categoryText: string;
+  priceCents: number;
+  currency: string;
+  imageUrl: string;
+  productUrl: string;
+  affiliateUrl: string;
+  brand: string | null;
+  genderHint: string; // "male" | "female" | ""
+}
+
+function normalizeRecord(r: Record<string, string>): NormalizedRecord | null {
+  if (r.aw_product_id) {
+    // Format Awin natif.
+    const priceCents = Math.round(parseFloat(r.search_price || "0") * 100);
+    return {
+      externalId: r.aw_product_id,
+      title: r.product_name || "",
+      merchantName: r.merchant_name || "Marchand",
+      categoryText: r.category_name || r.product_type || r.merchant_category || "",
+      priceCents,
+      currency: r.currency || "EUR",
+      imageUrl: r.merchant_image_url || "",
+      productUrl: r.merchant_deep_link || r.aw_deep_link || "",
+      affiliateUrl: r.aw_deep_link || "",
+      brand: r.brand_name || null,
+      genderHint: (r["fashion:suitable_for"] || "").toLowerCase()
+    };
+  }
+  if (r.id && r.title) {
+    // Format Google Shopping/Merchant Center.
+    const { amount, currency } = parsePriceWithCurrency(r.price || "");
+    return {
+      externalId: r.id,
+      title: r.title,
+      merchantName: r.advertiser_name || "Marchand",
+      categoryText: r.google_product_category || r.product_type || "",
+      priceCents: Math.round(amount * 100),
+      currency: currency || "USD",
+      imageUrl: r.image_link || "",
+      productUrl: r.link || "",
+      affiliateUrl: r.aw_deep_link || r.link || "",
+      brand: r.brand || null,
+      genderHint: (r.gender || "").toLowerCase()
+    };
+  }
+  return null; // format non reconnu, ligne ignoree
 }
 
 export async function ingest(csvText: string): Promise<number> {
@@ -80,47 +140,49 @@ export async function ingest(csvText: string): Promise<number> {
     batch.length = 0;
   };
 
-  for (const r of records) {
-    const categoryText = r.category_name || r.product_type || r.merchant_category || "";
-    if (KIDS_RE.test(categoryText)) continue; // pas de segment enfant sur Modaia
-    const category = mapCategory(categoryText);
-    const priceCents = Math.round(parseFloat(r.search_price || "0") * 100);
-    if (!category || !r.aw_product_id || !r.merchant_image_url || priceCents <= 0) continue;
+  for (const raw of records) {
+    const rec = normalizeRecord(raw);
+    if (!rec) continue; // format de ligne non reconnu
 
-    const mName = r.merchant_name || "Marchand";
-    let merchantId = seenMerchants.get(mName);
+    // Le texte de categorie ne mentionne pas toujours le genre (ex. Tiavllya,
+    // format Google, categories = "Suits > Tuxedo" sans indication) : on regarde
+    // aussi le titre, qui lui le precise generalement ("Men's ...", "Femme ...").
+    const genderText = `${rec.categoryText} ${rec.title}`;
+    if (KIDS_RE.test(genderText)) continue; // pas de segment enfant sur Modaia
+    const category = mapCategory(rec.categoryText);
+    if (!category || !rec.externalId || !rec.imageUrl || rec.priceCents <= 0) continue;
+
+    let merchantId = seenMerchants.get(rec.merchantName);
     if (!merchantId) {
-      const rows = await sql`insert into merchants (name, network) values (${mName}, 'awin') on conflict (name) do nothing returning id`;
-      merchantId = rows[0]?.id ?? (await sql`select id from merchants where name = ${mName}`)[0].id;
-      seenMerchants.set(mName, merchantId as number);
+      const rows = await sql`insert into merchants (name, network) values (${rec.merchantName}, 'awin') on conflict (name) do nothing returning id`;
+      merchantId = rows[0]?.id ?? (await sql`select id from merchants where name = ${rec.merchantName}`)[0].id;
+      seenMerchants.set(rec.merchantName, merchantId as number);
     }
 
-    // "Fashion:suitable_for" (Male/Female/Unisex) est plus fiable que l'heuristique
-    // sur le texte de categorie quand le marchand le fournit (colonne en minuscules,
-    // parseCsv normalise les entetes).
-    const suitableFor = (r["fashion:suitable_for"] || "").toLowerCase();
+    // Le genre explicite du marchand (quand fourni) est plus fiable que l'heuristique
+    // sur categorie+titre.
     const gender =
-      suitableFor === "male" ? "men" :
-      suitableFor === "female" ? "women" :
-      /homme|men|male/i.test(categoryText) ? "men" : "women";
+      rec.genderHint === "male" ? "men" :
+      rec.genderHint === "female" ? "women" :
+      /\bhomme|\bmen\b|\bmale\b|\bmen's\b/i.test(genderText) ? "men" : "women";
 
-    const productKey = baseProductKey(merchantId as number, r.product_name || "");
+    const productKey = baseProductKey(merchantId as number, rec.title);
     if (seenProducts.has(productKey)) continue; // variante taille/couleur deja vue
     seenProducts.add(productKey);
 
     batch.push({
       merchant_id: merchantId as number,
-      external_id: r.aw_product_id,
-      title: r.product_name,
-      brand: r.brand_name || null,
+      external_id: rec.externalId,
+      title: rec.title,
+      brand: rec.brand,
       gender,
       category,
-      price_cents: priceCents,
-      currency: r.currency || "EUR",
-      image_url: r.merchant_image_url,
-      product_url: r.merchant_deep_link || r.aw_deep_link,
-      affiliate_url: r.aw_deep_link,
-      tags: extractTags(r.product_name || "")
+      price_cents: rec.priceCents,
+      currency: rec.currency,
+      image_url: rec.imageUrl,
+      product_url: rec.productUrl || rec.affiliateUrl,
+      affiliate_url: rec.affiliateUrl || rec.productUrl,
+      tags: extractTags(rec.title)
     });
     if (batch.length >= BATCH_SIZE) await flush();
   }
