@@ -1,7 +1,17 @@
-// Parser CSV minimal, zero dependance, gere les champs quotes avec virgules et retours ligne.
-export function parseCsv(text: string): Record<string, string>[] {
-  const rows: string[][] = [];
+// Parser CSV minimal, zero dependance, gere les champs quotes avec virgules et
+// retours ligne. En generateur (une ligne a la fois) : certains flux depassent
+// 20000 lignes / plusieurs dizaines de colonnes, construire le tableau complet
+// en memoire avant de le traiter provoquait un Out Of Memory sur la function.
+export function* parseCsv(text: string): Generator<Record<string, string>> {
+  let header: string[] | null = null;
   let field = "", row: string[] = [], inQuotes = false;
+
+  function* emitRow(): Generator<Record<string, string>> {
+    if (row.length <= 1 && row[0] === "") return;
+    if (!header) { header = row.map((h) => h.trim().toLowerCase()); return; }
+    yield Object.fromEntries(header.map((h, i) => [h, row[i] ?? ""]));
+  }
+
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (inQuotes) {
@@ -14,16 +24,14 @@ export function parseCsv(text: string): Record<string, string>[] {
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && text[i + 1] === "\n") i++;
       row.push(field); field = "";
-      if (row.length > 1 || row[0] !== "") rows.push(row);
+      yield* emitRow();
       row = [];
     } else field += c;
   }
-  if (field !== "" || row.length > 0) { row.push(field); rows.push(row); }
-  if (rows.length < 2) return [];
-  const header = rows[0].map((h) => h.trim().toLowerCase());
-  return rows.slice(1).map((r) =>
-    Object.fromEntries(header.map((h, i) => [h, r[i] ?? ""]))
-  );
+  if (field !== "" || row.length > 0) {
+    row.push(field);
+    yield* emitRow();
+  }
 }
 
 // Mapping categories Awin/marchands -> taxonomie Modaia

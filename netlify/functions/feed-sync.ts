@@ -114,7 +114,8 @@ function normalizeRecord(r: Record<string, string>): NormalizedRecord | null {
 }
 
 export async function ingest(csvText: string): Promise<number> {
-  const records = parseCsv(csvText);
+  // parseCsv est un generateur (une ligne a la fois) : evite de garder tout le
+  // flux parse en memoire pour les gros feeds (Tiavllya ~22000 lignes).
   const seenMerchants = new Map<string, number>();
   const seenProducts = new Set<string>();
   const batch: ProductRow[] = [];
@@ -140,7 +141,7 @@ export async function ingest(csvText: string): Promise<number> {
     batch.length = 0;
   };
 
-  for (const raw of records) {
+  for (const raw of parseCsv(csvText)) {
     const rec = normalizeRecord(raw);
     if (!rec) continue; // format de ligne non reconnu
 
